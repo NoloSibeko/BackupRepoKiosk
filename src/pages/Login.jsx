@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { TextField, Button, Container, Typography, Grid, Paper, Box } from '@mui/material';
-import axios from 'axios';
+import { TextField, Button, Container, Typography, Grid, Paper, Box, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { login } from '../api/auth';
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -16,30 +17,37 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
+    setIsLoading(true);
+  
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', formData);
-      const token = response.data.token;
-      localStorage.setItem('authToken', token);
-      navigate('/');
+      const response = await login({
+        Email: formData.email,
+        Password: formData.password
+      });
+  
+      if (response && response.token) {
+        localStorage.setItem('authToken', response.token);
+        navigate('/dashboard'); // Redirect only if login is successful
+      } else {
+        setError('Invalid login response');
+      }
     } catch (err) {
-      setError('Invalid email or password.');
+      setError(err.toString());
+    } finally {
+      setIsLoading(false);
     }
   };
+  
 
   return (
     <Container maxWidth="sm">
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <Paper elevation={3} sx={{ width: '100%' }}>
+        <Paper elevation={3} sx={{ width: '100%', p: 4 }}>
           <Typography variant="h5" align="center" gutterBottom>
             Login to Kiosk System
           </Typography>
-          {error && (
-            <Typography color="error" align="center" gutterBottom>
-              {error}
-            </Typography>
-          )}
-          <Box component="form" onSubmit={handleSubmit} px={4}>
+          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+          <Box component="form" onSubmit={handleSubmit}>
             <Grid container spacing={3} direction="column">
               <Grid item>
                 <TextField
@@ -70,12 +78,13 @@ const Login = () => {
                   type="submit"
                   variant="contained"
                   fullWidth
+                  disabled={isLoading}
                   sx={{
                     backgroundColor: '#4CAF50',
                     '&:hover': { backgroundColor: '#45A049' }
                   }}
                 >
-                  Login
+                  {isLoading ? 'Logging in...' : 'Login'}
                 </Button>
               </Grid>
             </Grid>

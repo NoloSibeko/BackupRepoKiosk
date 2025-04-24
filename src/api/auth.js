@@ -1,11 +1,41 @@
 import axios from 'axios';
 
-const API_URL = 'https://localhost:port/api/Auth'; // Replace `port` with backend port
+const API_BASE_URL = 'https://localhost:7273/api/Auth'; // Updated to your backend URL
 
-export const registerUser = async (userData) => {
-  return axios.post(`${API_URL}/register`, userData);
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add interceptor to include token in requests
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export const register = async (userData) => {
+  try {
+    const response = await api.post('/register', userData);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.message || error.response?.data || 'Registration failed. Please try again.';
+  }
 };
 
-export const loginUser = async (userData) => {
-  return axios.post(`${API_URL}/login`, userData);
+export const login = async (credentials) => {
+  try {
+    const response = await api.post('/login', credentials);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data?.message || error.response?.data || 'Login failed. Please try again.';
+  }
+};
+
+export const logout = () => {
+  localStorage.removeItem('authToken');
 };

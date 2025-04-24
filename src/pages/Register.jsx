@@ -1,27 +1,51 @@
-// src/pages/Register.jsx
 import React, { useState } from 'react';
-import { Box, Button, Paper, TextField, Typography, Link } from '@mui/material';
+import { Box, Button, Paper, TextField, Typography, Link, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { register } from '../api/auth';
 
 export default function Register() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     name: '',
-    surname: '',
+    surname: '',  // Changed from 'current'
     email: '',
-    contactNumber: '',
-    password: '',
+    contactNumber: '',  // Changed from 'contactName'
+    password: ''
   });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // You'd replace this with actual API logic
-    console.log('Registering:', form);
-    navigate('/login'); // After registration, go to login
+    setError('');
+    setIsLoading(true);
+  
+    try {
+      const response = await register({
+        Name: form.name,
+        Surname: form.surname,  // Changed from 'current'
+        Email: form.email,
+        ContactNumber: form.contactNumber,  // Changed from 'contactName'
+        Password: form.password,
+        AccountStatus: 'Active'  // Added default value
+      });
+      
+      setSuccess(true);
+      setTimeout(() => navigate('/dashboard'), 2000);
+      
+      // Debugging - log the full response
+      console.log('Registration response:', response);
+    } catch (err) {
+      setError(err.toString());
+      console.error('Registration error:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -50,6 +74,9 @@ export default function Register() {
           Create Your Account
         </Typography>
 
+        {error && <Alert severity="error">{error}</Alert>}
+        {success && <Alert severity="success">Registration successful! Redirecting to login...</Alert>}
+
         <TextField
           name="name"
           label="Name"
@@ -57,14 +84,16 @@ export default function Register() {
           fullWidth
           value={form.name}
           onChange={handleChange}
+          required
         />
         <TextField
-          name="surname"
+          name="surname"  // Changed from 'current'
           label="Surname"
           variant="outlined"
           fullWidth
           value={form.surname}
           onChange={handleChange}
+          required
         />
         <TextField
           name="email"
@@ -73,6 +102,8 @@ export default function Register() {
           fullWidth
           value={form.email}
           onChange={handleChange}
+          required
+          type="email"
         />
         <TextField
           name="contactNumber"
@@ -81,6 +112,7 @@ export default function Register() {
           fullWidth
           value={form.contactNumber}
           onChange={handleChange}
+          required
         />
         <TextField
           name="password"
@@ -90,6 +122,8 @@ export default function Register() {
           fullWidth
           value={form.password}
           onChange={handleChange}
+          required
+          inputProps={{ minLength: 6 }}
         />
 
         <Button
@@ -98,8 +132,9 @@ export default function Register() {
           fullWidth
           onClick={handleSubmit}
           sx={{ mt: 2 }}
+          disabled={isLoading}
         >
-          Register
+          {isLoading ? 'Registering...' : 'Register'}
         </Button>
 
         <Typography variant="body2" align="center" sx={{ mt: 1 }}>
