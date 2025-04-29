@@ -1,11 +1,24 @@
 import React from 'react';
 import { Box, Typography, Paper, Container } from '@mui/material';
-import ProductList from '../components/ProductList'; // Adjust path if necessary
+import ProductList from '../components/ProductList';
 
 const Dashboard = () => {
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ p: 4 }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        backgroundColor: '#f5f5f5',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <Container
+        maxWidth="xl" // Can be "false" if you want full-width without MUI breakpoints
+        sx={{
+          flexGrow: 1,
+          py: 4,
+        }}
+      >
         <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
           <Typography variant="h4" gutterBottom>
             Welcome to the Dashboard!
@@ -15,15 +28,14 @@ const Dashboard = () => {
           </Typography>
         </Paper>
 
-        {/* Product Management Section */}
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h5" gutterBottom>
-            Product Management
+            Available Products
           </Typography>
           <ProductList />
         </Paper>
-      </Box>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 

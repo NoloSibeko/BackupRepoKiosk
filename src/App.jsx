@@ -6,6 +6,7 @@ import theme from './theme';
 import Register from './pages/Register';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import AuthPage from './pages/AuthPage';
 
 function App() {
   return (
@@ -13,10 +14,10 @@ function App() {
       <CssBaseline />
       <Router>
         <Routes>
-          
-          <Route path="/" element={<Register />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/login" element={<AuthPage />} />
+        <Route path="/register" element={<AuthPage />} />
+        <Route path="/" element={<AuthPage />} />
         </Routes>
       </Router>
     </ThemeProvider>

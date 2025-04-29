@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
-import { Box, Button, Paper, TextField, Typography, Link, Alert } from '@mui/material';
+import { Box, Button, TextField, Typography, Link, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { register } from '../api/auth';
 
-export default function Register() {
-  const navigate = useNavigate();
+const Register = ({ toggleAuthMode }) => {
   const [form, setForm] = useState({
     name: '',
-    surname: '',  // Changed from 'current'
+    surname: '',
     email: '',
-    contactNumber: '',  // Changed from 'contactName'
+    contactNumber: '',
     password: ''
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -28,55 +28,31 @@ export default function Register() {
     try {
       const response = await register({
         Name: form.name,
-        Surname: form.surname,  // Changed from 'current'
+        Surname: form.surname,
         Email: form.email,
-        ContactNumber: form.contactNumber,  // Changed from 'contactName'
+        ContactNumber: form.contactNumber,
         Password: form.password,
-        AccountStatus: 'Active'  // Added default value
+        AccountStatus: 'Active'
       });
       
       setSuccess(true);
       setTimeout(() => navigate('/dashboard'), 2000);
-      
-      // Debugging - log the full response
-      console.log('Registration response:', response);
     } catch (err) {
       setError(err.toString());
-      console.error('Registration error:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        backgroundColor: '#f0f4f0',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 2,
-      }}
-    >
-      <Paper
-        elevation={6}
-        sx={{
-          padding: 4,
-          width: '100%',
-          maxWidth: 400,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-        }}
-      >
-        <Typography variant="h5" align="center" gutterBottom>
-          Create Your Account
-        </Typography>
+    <Box sx={{ width: '100%', maxWidth: 400 }}>
+      <Typography variant="h4" align="center" gutterBottom>
+        Register
+      </Typography>
+      {error && <Alert severity="error">{error}</Alert>}
+      {success && <Alert severity="success">Registration successful! Redirecting...</Alert>}
 
-        {error && <Alert severity="error">{error}</Alert>}
-        {success && <Alert severity="success">Registration successful! Redirecting to login...</Alert>}
-
+      <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
         <TextField
           name="name"
           label="Name"
@@ -85,15 +61,17 @@ export default function Register() {
           value={form.name}
           onChange={handleChange}
           required
+          sx={{ mb: 2 }}
         />
         <TextField
-          name="surname"  // Changed from 'current'
+          name="surname"
           label="Surname"
           variant="outlined"
           fullWidth
           value={form.surname}
           onChange={handleChange}
           required
+          sx={{ mb: 2 }}
         />
         <TextField
           name="email"
@@ -104,6 +82,7 @@ export default function Register() {
           onChange={handleChange}
           required
           type="email"
+          sx={{ mb: 2 }}
         />
         <TextField
           name="contactNumber"
@@ -113,6 +92,7 @@ export default function Register() {
           value={form.contactNumber}
           onChange={handleChange}
           required
+          sx={{ mb: 2 }}
         />
         <TextField
           name="password"
@@ -124,6 +104,7 @@ export default function Register() {
           onChange={handleChange}
           required
           inputProps={{ minLength: 6 }}
+          sx={{ mb: 3 }}
         />
 
         <Button
@@ -131,19 +112,31 @@ export default function Register() {
           color="primary"
           fullWidth
           onClick={handleSubmit}
-          sx={{ mt: 2 }}
           disabled={isLoading}
+          sx={{ height: '48px' }}
         >
           {isLoading ? 'Registering...' : 'Register'}
         </Button>
 
-        <Typography variant="body2" align="center" sx={{ mt: 1 }}>
+        <Typography variant="body2" align="center" sx={{ mt: 2 }}>
           Already have an account?{' '}
-          <Link href="/login" underline="hover" color="secondary">
+          <Link 
+            component="button" 
+            type="button" 
+            onClick={toggleAuthMode}
+            sx={{ 
+              color: '#4CAF50',
+              textDecoration: 'none',
+              '&:hover': { textDecoration: 'underline' },
+              cursor: 'pointer'
+            }}
+          >
             Login here
           </Link>
         </Typography>
-      </Paper>
+      </Box>
     </Box>
   );
-}
+};
+
+export default Register;
