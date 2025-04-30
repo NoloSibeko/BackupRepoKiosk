@@ -6,108 +6,114 @@ import {
   Typography, 
   Grid, 
   Alert, 
-  Link 
+  Link,
+  CircularProgress
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { login } from '../api/auth';
 
 const Login = ({ toggleAuthMode }) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
+    // Basic validation
+    if (!formData.email || !formData.password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
     setIsLoading(true);
-  
+    
     try {
-      // Your login logic here
+      const response = await login({
+        email: formData.email,
+        password: formData.password
+      });
+
+      if (response?.token) {
+        localStorage.setItem('authToken', response.token);
+        navigate('/dashboard');
+      } else {
+        setError('Invalid response from server');
+      }
     } catch (err) {
-      setError(err.toString());
+      console.error('Login failed:', err);
+      setError(err.response?.data?.message || err.message || 'Login failed');
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   return (
-    <Box sx={{ 
-      width: '100%',
-      maxWidth: 500,
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center'
-    }}>
-      <Typography variant="h3" align="center" gutterBottom fontWeight="bold">
+    <Box sx={{ width: '100%', maxWidth: 400 }}>
+      <Typography variant="h4" align="center" gutterBottom>
         Login
       </Typography>
-      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
-      <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-        <Grid container spacing={3} direction="column">
-          <Grid item>
+      
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <Box component="form" onSubmit={handleSubmit} noValidate>
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
             <TextField
-              label="Email"
-              variant="outlined"
               fullWidth
-              size="large"
+              label="Email"
               name="email"
+              type="email"
               value={formData.email}
               onChange={handleChange}
               required
-              type="email"
-              sx={{ mb: 2 }}
             />
           </Grid>
-          <Grid item>
+          <Grid item xs={12}>
             <TextField
-              label="Password"
-              variant="outlined"
               fullWidth
-              size="large"
+              label="Password"
               name="password"
+              type="password"
               value={formData.password}
               onChange={handleChange}
               required
-              type="password"
-              sx={{ mb: 2 }}
             />
           </Grid>
-          <Grid item>
+          <Grid item xs={12}>
             <Button
               type="submit"
-              variant="contained"
               fullWidth
-              size="large"
+              variant="contained"
               disabled={isLoading}
-              sx={{
-                height: '56px',
-                fontSize: '1.1rem',
-                backgroundColor: '#4CAF50',
-                '&:hover': { backgroundColor: '#45A049' },
-              }}
+              sx={{ height: 48 }}
             >
-              {isLoading ? 'Logging in...' : 'Login'}
+              {isLoading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                'Login'
+              )}
             </Button>
           </Grid>
-          <Grid item>
-            <Typography variant="body1" align="center" sx={{ mt: 3 }}>
+          <Grid item xs={12} textAlign="center">
+            <Typography variant="body2">
               Don't have an account?{' '}
               <Link 
                 component="button" 
-                type="button" 
+                type="button"
                 onClick={toggleAuthMode}
-                sx={{ 
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                  color: '#1976d2',
-                  textDecoration: 'none',
-                  '&:hover': { textDecoration: 'underline' },
-                  cursor: 'pointer'
-                }}
+                sx={{ cursor: 'pointer' }}
               >
                 Register here
               </Link>

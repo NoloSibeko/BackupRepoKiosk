@@ -1,24 +1,30 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Typography, Paper, Container } from '@mui/material';
 import ProductList from '../components/ProductList';
+import { getProducts } from '../api/product';
 
 const Dashboard = () => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const data = await getProducts();
+        setProducts(data);
+      } catch (error) {
+        console.error('Failed to fetch products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        backgroundColor: '#f5f5f5',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Container
-        maxWidth="xl" // Can be "false" if you want full-width without MUI breakpoints
-        sx={{
-          flexGrow: 1,
-          py: 4,
-        }}
-      >
+    <Container maxWidth="lg">
+      <Box sx={{ p: 4 }}>
         <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
           <Typography variant="h4" gutterBottom>
             Welcome to the Dashboard!
@@ -32,10 +38,15 @@ const Dashboard = () => {
           <Typography variant="h5" gutterBottom>
             Available Products
           </Typography>
-          <ProductList />
+
+          {loading ? (
+            <Typography>Loading products...</Typography>
+          ) : (
+            <ProductList products={products} />
+          )}
         </Paper>
-      </Container>
-    </Box>
+      </Box>
+    </Container>
   );
 };
 

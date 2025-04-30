@@ -1,26 +1,27 @@
-// src/App.jsx
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, CssBaseline } from '@mui/material';
-import theme from './theme';
-import Register from './pages/Register';
-import Login from './pages/Login';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
-import AuthPage from './pages/AuthPage';
+import Product from './pages/Product';
+import Cart from './pages/Cart';
+import Wallet from './pages/Wallet';
+import Transactions from './pages/Transactions';
+import Login from './pages/Login';
+import Register from './pages/Register';
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Router>
-        <Routes>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/login" element={<AuthPage />} />
-        <Route path="/register" element={<AuthPage />} />
-        <Route path="/" element={<AuthPage />} />
-        </Routes>
-      </Router>
-    </ThemeProvider>
+    <Router>
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/product" element={<Product />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/wallet" element={<Wallet />} />
+        <Route path="/transactions" element={<Transactions />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Routes>
+    </Router>
   );
 }
 
