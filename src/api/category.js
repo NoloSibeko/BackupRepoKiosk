@@ -14,7 +14,7 @@ const getAuthHeader = () => {
 export const getCategories = async () => {
   try {
     const response = await axios.get(API_BASE, getAuthHeader());
-    return response.data;
+    return response.data; // Ensure this returns an array of categories with `categoryID` and `categoryName`
   } catch (error) {
     console.error('Error fetching categories:', error);
     throw error;

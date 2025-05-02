@@ -11,6 +11,7 @@ const Cart = () => {
         {/* Cart content will go here */}
       </Box>
     </Container>
+    
   );
 };
 

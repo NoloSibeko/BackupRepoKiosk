@@ -18,11 +18,14 @@ import {
   Menu as MenuIcon,
   AccountCircle
 } from '@mui/icons-material';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const open = Boolean(anchorEl);
+  const [profileAnchorEl, setProfileAnchorEl] = React.useState(null);
+  const profileMenuOpen = Boolean(profileAnchorEl);
+  const navigate = useNavigate();
 
   const handleMenu = (event) => {
     setAnchorEl(event.currentTarget);
@@ -30,6 +33,20 @@ const Navbar = () => {
 
   const handleClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleProfileMenu = (event) => {
+    setProfileAnchorEl(event.currentTarget);
+  };
+
+  const handleProfileMenuClose = () => {
+    setProfileAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    // Clear any authentication tokens or session data
+    localStorage.removeItem('authToken');
+    navigate('/login'); // Redirect to the login page
   };
 
   return (
@@ -148,14 +165,32 @@ const Navbar = () => {
           size="large"
           edge="end"
           aria-label="account of current user"
+          aria-controls="profile-menu"
+          aria-haspopup="true"
+          onClick={handleProfileMenu}
           color="inherit"
-          component={Link}
-          to="/profile"
         >
           <Avatar sx={{ width: 32, height: 32 }}>
             <AccountCircle />
           </Avatar>
         </IconButton>
+        <Menu
+          id="profile-menu"
+          anchorEl={profileAnchorEl}
+          open={profileMenuOpen}
+          onClose={handleProfileMenuClose}
+          anchorOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+        >
+          <MenuItem component={Link} to="/logout" onClick={handleProfileMenuClose}>
+          Logout</MenuItem>
+        </Menu>
       </Toolbar>
     </AppBar>
   );

@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { Box, Button, TextField, Typography, Link, Alert } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { Box, Button, TextField, Typography, Alert } from '@mui/material';
+import { Link, useNavigate } from 'react-router-dom';
 import { register } from '../api/auth';
 
-const Register = ({ toggleAuthMode }) => {
+const Register = () => {
   const [form, setForm] = useState({
     name: '',
     surname: '',
     email: '',
     contactNumber: '',
-    password: ''
+    password: '',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -24,7 +24,7 @@ const Register = ({ toggleAuthMode }) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-  
+
     try {
       const response = await register({
         Name: form.name,
@@ -32,11 +32,11 @@ const Register = ({ toggleAuthMode }) => {
         Email: form.email,
         ContactNumber: form.contactNumber,
         Password: form.password,
-        AccountStatus: 'Active'
+        AccountStatus: 'Active',
       });
-      
+
       setSuccess(true);
-      setTimeout(() => navigate('/dashboard'), 2000);
+      setTimeout(() => navigate('/dashboard'), 2000); // Redirect to Dashboard
     } catch (err) {
       setError(err.toString());
     } finally {
@@ -45,14 +45,23 @@ const Register = ({ toggleAuthMode }) => {
   };
 
   return (
-    <Box sx={{ width: '100%', maxWidth: 400 }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'column',
+        backgroundColor: '#f5f5f5', // Set light background color
+      }}
+    >
       <Typography variant="h4" align="center" gutterBottom>
         Register
       </Typography>
       {error && <Alert severity="error">{error}</Alert>}
       {success && <Alert severity="success">Registration successful! Redirecting...</Alert>}
 
-      <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+      <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%', maxWidth: 400, mt: 2 }}>
         <TextField
           name="name"
           label="Name"
@@ -111,7 +120,7 @@ const Register = ({ toggleAuthMode }) => {
           variant="contained"
           color="primary"
           fullWidth
-          onClick={handleSubmit}
+          type="submit"
           disabled={isLoading}
           sx={{ height: '48px' }}
         >
@@ -120,17 +129,7 @@ const Register = ({ toggleAuthMode }) => {
 
         <Typography variant="body2" align="center" sx={{ mt: 2 }}>
           Already have an account?{' '}
-          <Link 
-            component="button" 
-            type="button" 
-            onClick={toggleAuthMode}
-            sx={{ 
-              color: '#4CAF50',
-              textDecoration: 'none',
-              '&:hover': { textDecoration: 'underline' },
-              cursor: 'pointer'
-            }}
-          >
+          <Link to="/login" style={{ textDecoration: 'none', color: '#1976d2' }}>
             Login here
           </Link>
         </Typography>

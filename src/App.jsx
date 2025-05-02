@@ -7,6 +7,8 @@ import Wallet from './pages/Wallet';
 import Transactions from './pages/Transactions';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Products from './components/Products'; 
+import Logout from './pages/Logout';
 
 function App() {
   return (
@@ -20,6 +22,8 @@ function App() {
         <Route path="/transactions" element={<Transactions />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/logout" element={<Logout />} />
       </Routes>
     </Router>
   );

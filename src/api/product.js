@@ -13,46 +13,87 @@ const getAuthHeader = () => {
 
 // Get all products
 export const getProducts = async () => {
-  try {
-    const response = await axios.get(BASE_URL, getAuthHeader());
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    throw error;
+  const response = await fetch(`${BASE_URL}`, {
+    method: 'GET',
+    headers: getAuthHeader().headers,
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch products');
   }
+
+  return await response.json();
 };
 
-// Create new product
 export const createProduct = async (productData) => {
-  try {
-    const response = await axios.post(BASE_URL, productData, getAuthHeader());
-    return response.data;
-  } catch (error) {
-    console.error('Error creating product:', error);
-    throw error;
+  const formData = new FormData();
+  formData.append('name', productData.name);
+  formData.append('description', productData.description);
+  formData.append('price', productData.price);
+  formData.append('quantity', productData.quantity);
+  formData.append('categoryId', productData.categoryId);
+  if (productData.image) {
+    formData.append('image', productData.image);
   }
+
+  const response = await fetch(`${BASE_URL}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to create product');
+  }
+
+  return await response.json();
 };
 
-// Update existing product
 export const updateProduct = async (id, productData) => {
-  try {
-    const response = await axios.put(`${BASE_URL}/${id}`, productData, getAuthHeader());
-    return response.data;
-  } catch (error) {
-    console.error('Error updating product:', error);
-    throw error;
+  const formData = new FormData();
+  formData.append('name', productData.name);
+  formData.append('description', productData.description);
+  formData.append('price', productData.price);
+  formData.append('quantity', productData.quantity);
+  formData.append('categoryId', productData.categoryId);
+  if (productData.image) {
+    formData.append('image', productData.image);
   }
+
+  const response = await fetch(`${BASE_URL}/${id}`, {
+    method: 'PUT',
+    headers: getAuthHeader().headers, // Include auth header
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to update product');
+  }
+
+  return await response.json();
 };
 
 // Delete product
 export const deleteProduct = async (id) => {
-  try {
-    const response = await axios.delete(`${BASE_URL}/${id}`, getAuthHeader());
-    return response.data;
-  } catch (error) {
-    console.error('Error deleting product:', error);
-    throw error;
+  const response = await fetch(`${BASE_URL}/${id}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+    },
+  });
+
+  console.log('Delete response:', response); // Log the response for debugging
+
+  if (!response.ok) {
+    const error = await response.json();
+    console.error('Delete error:', error); // Log the error response
+    throw new Error(error.message || 'Failed to delete product');
   }
+
+  return await response.json();
 };
 
 // Make sure all exports are included
