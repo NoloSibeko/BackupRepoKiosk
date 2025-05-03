@@ -76,24 +76,25 @@ export const updateProduct = async (id, productData) => {
   return await response.json();
 };
 
-// Delete product
 export const deleteProduct = async (id) => {
-  const response = await fetch(`${BASE_URL}/${id}`, {
-    method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-    },
-  });
+  try {
+    const response = await fetch(`${BASE_URL}/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+      },
+    });
 
-  console.log('Delete response:', response); // Log the response for debugging
+    if (!response.ok) {
+      throw new Error('Failed to delete product');
+    }
 
-  if (!response.ok) {
-    const error = await response.json();
-    console.error('Delete error:', error); // Log the error response
-    throw new Error(error.message || 'Failed to delete product');
+    // No content is returned for a successful delete (204 status)
+    return true;
+  } catch (error) {
+    console.error('Error in deleteProduct:', error);
+    throw error;
   }
-
-  return await response.json();
 };
 
 // Make sure all exports are included

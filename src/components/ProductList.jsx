@@ -49,10 +49,11 @@ const ProductList = () => {
 
   const handleDelete = async (id) => {
     try {
-      await deleteProduct(id);
-      fetchProducts();
-    } catch (err) {
-      console.error('Failed to delete product:', err);
+      await deleteProduct(id); // Call the delete API
+      setProducts((prevProducts) => prevProducts.filter((product) => product.productID !== id)); // Update the state
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+      alert('Failed to delete product. Please try again.');
     }
   };
 

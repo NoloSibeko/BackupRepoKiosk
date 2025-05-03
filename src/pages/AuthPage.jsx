@@ -10,9 +10,6 @@ const AuthContainer = styled(Box)({
   height: '100vh',
   width: '100vw',
   overflow: 'hidden',
-  position: 'fixed',
-  top: 0,
-  left: 0,
 });
 
 const FormContainer = styled(motion.div)({

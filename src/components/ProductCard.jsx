@@ -18,6 +18,16 @@ import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
 const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
   const [flipped, setFlipped] = useState(false);
 
+  const handleDelete = async (id) => {
+    try {
+      await deleteProduct(id); // Call the delete API
+      setProducts((prevProducts) => prevProducts.filter((product) => product.productID !== id)); // Update the state
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+      alert('Failed to delete product. Please try again.');
+    }
+  };
+
   const handleFlip = () => {
     setFlipped((prev) => !prev);
   };
@@ -104,16 +114,16 @@ const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
       WebkitBoxOrient: 'vertical',
       overflow: 'hidden',
       textOverflow: 'ellipsis',
-      minHeight: '3.6em', // slightly shorter
-      mb: 1, // less space below
+      minHeight: '3.6em',
+      mb: 1,
     }}
   >
-    {product.description}
+
   </Typography>
 
   <Stack direction="column" spacing={0.5}>
     <Typography variant="body2" color="text.secondary">
-      <strong>Category:</strong> {product.category?.name || 'Uncategorized'}
+      <strong>Category:</strong> {product.categoryName || 'Uncategorized'}
     </Typography>
     <Typography variant="body1" color="primary">
       <strong>R{product.price.toFixed(2)}</strong>
@@ -124,58 +134,58 @@ const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
         </Card>
         {/* Back Side */}
         <Card
-          sx={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            backfaceVisibility: 'hidden',
-            transform: 'rotateY(180deg)',
-            backgroundColor: '#eeeeee',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            p: 2,
-            textAlign: 'center',
-          }}
-        >
-          <Typography variant="h6" gutterBottom>
-            {product.name}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-  <strong>Category:</strong> {product.category?.categoryName || 'Uncategorized'}
-</Typography>
-<Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-  <strong>Description:</strong> {product.description || 'No description available'}
-</Typography>
+  sx={{
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backfaceVisibility: 'hidden',
+    transform: 'rotateY(180deg)',
+    backgroundColor: '#eeeeee',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    p: 2,
+    textAlign: 'center',
+  }}
+>
+  <Typography variant="h6" gutterBottom>
+    {product.name}
+  </Typography>
+  <Typography variant="body2" color="text.secondary">
+    <strong>Category:</strong> {product.categoryName || 'Uncategorized'}
+  </Typography>
+  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+    <strong>Description:</strong> {product.Description || 'No description available'}
+  </Typography>
 
-          {isSuperuser && (
-            <CardActions sx={{ justifyContent: 'center', gap: 2 }}>
-  <Button
-    size="small"
-    variant="contained"
-    color="warning"
-    onClick={(e) => {
-      e.stopPropagation(); // Prevent the card's onClick event from firing
-      onEdit(product); // Pass the product to the onEdit function
-    }}
-  >
-    Edit
-  </Button>
-  <Button
-    size="small"
-    variant="contained"
-    color="error"
-    onClick={(e) => {
-      e.stopPropagation(); // Prevent the card's onClick event from firing
-      onDelete(product.id); // Pass the product ID to the onDelete function
-    }}
-  >
-    Delete
-  </Button>
-</CardActions>
-          )}
-        </Card>
+  {isSuperuser && (
+    <CardActions sx={{ justifyContent: 'center', gap: 2 }}>
+      <Button
+        size="small"
+        variant="contained"
+        color="warning"
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent the card's onClick event from firing
+          onEdit(product); // Pass the product to the onEdit function
+        }}
+      >
+        Edit
+      </Button>
+      <Button
+  size="small"
+  variant="contained"
+  color="error"
+  onClick={(e) => {
+    e.stopPropagation(); // Prevent the card's onClick event from firing
+    onDelete(product.productID); // Pass the correct product ID
+  }}
+>
+  Delete
+</Button>
+    </CardActions>
+  )}
+</Card>
       </Box>
     </Box>
   );

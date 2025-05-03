@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
-import { Box, Button, TextField, Typography, Alert } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
+import { 
+  Box, 
+  TextField, 
+  Button, 
+  Typography, 
+  Alert, 
+  Link,
+  CircularProgress
+} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import { register } from '../api/auth';
 
-const Register = () => {
+const Register = ({ toggleAuthMode }) => {
   const [form, setForm] = useState({
     name: '',
     surname: '',
@@ -36,7 +44,7 @@ const Register = () => {
       });
 
       setSuccess(true);
-      setTimeout(() => navigate('/dashboard'), 2000); // Redirect to Dashboard
+      setTimeout(() => navigate('/dashboard'), 2000);
     } catch (err) {
       setError(err.toString());
     } finally {
@@ -45,23 +53,14 @@ const Register = () => {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        flexDirection: 'column',
-        backgroundColor: '#f5f5f5', // Set light background color
-      }}
-    >
+    <Box sx={{ width: '100%', maxWidth: 400 }}>
       <Typography variant="h4" align="center" gutterBottom>
         Register
       </Typography>
       {error && <Alert severity="error">{error}</Alert>}
       {success && <Alert severity="success">Registration successful! Redirecting...</Alert>}
 
-      <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%', maxWidth: 400, mt: 2 }}>
+      <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
         <TextField
           name="name"
           label="Name"
@@ -124,12 +123,21 @@ const Register = () => {
           disabled={isLoading}
           sx={{ height: '48px' }}
         >
-          {isLoading ? 'Registering...' : 'Register'}
+          {isLoading ? <CircularProgress size={24} /> : 'Register'}
         </Button>
 
         <Typography variant="body2" align="center" sx={{ mt: 2 }}>
           Already have an account?{' '}
-          <Link to="/login" style={{ textDecoration: 'none', color: '#1976d2' }}>
+          <Link 
+            component="button" 
+            type="button"
+            onClick={toggleAuthMode}
+            sx={{ 
+              textDecoration: 'none',
+              color: '#1976d2',
+              cursor: 'pointer'
+            }}
+          >
             Login here
           </Link>
         </Typography>

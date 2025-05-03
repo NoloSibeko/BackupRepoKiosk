@@ -113,10 +113,10 @@ const Dashboard = () => {
         >
           <Paper elevation={3} sx={{ p: 4, mb: 4 }}>
             <Typography variant="h4" gutterBottom>
-              Welcome to the Dashboard!
+              Welcome to the Singular Kiosk
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              This is your central hub for The Kiosk.
+              This is your central hub, enjoy.
             </Typography>
           </Paper>
 
@@ -134,7 +134,7 @@ const Dashboard = () => {
               Available Products
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Browse the products available in your kiosk system.
+              Browse the products available in the kiosk..
             </Typography>
 
             {/* Search and Add Product Row */}
@@ -149,7 +149,7 @@ const Dashboard = () => {
               }}
             >
               <TextField
-                placeholder="Search by name, category, or description..."
+                placeholder="Search by name..."
                 variant="outlined"
                 size="small"
                 sx={{ maxWidth: 400, width: '100%' }}
@@ -226,7 +226,7 @@ const Dashboard = () => {
         }}
       >
         <Typography variant="body2">
-          © {new Date().getFullYear()} Kiosk System. All rights reserved.
+          © {new Date().getFullYear()}Singular Kiosk System. All rights reserved.
         </Typography>
       </Box>
     </Box>
@@ -234,3 +234,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+///Last working version of the Dashboard component.

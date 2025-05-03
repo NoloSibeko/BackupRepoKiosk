@@ -1,9 +1,18 @@
 import React, { useState } from 'react';
-import { Box, TextField, Button, Typography, Grid, Alert, CircularProgress } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
+import { 
+  Box, 
+  TextField, 
+  Button, 
+  Typography, 
+  Grid, 
+  Alert, 
+  CircularProgress,
+  Link
+} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import { login } from '../api/auth';
 
-const Login = () => {
+const Login = ({ toggleAuthMode }) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -18,7 +27,6 @@ const Login = () => {
     e.preventDefault();
     setError('');
 
-    // Basic validation
     if (!formData.email || !formData.password) {
       setError('Please fill in all fields');
       return;
@@ -34,7 +42,7 @@ const Login = () => {
 
       if (response?.token) {
         localStorage.setItem('authToken', response.token);
-        navigate('/dashboard'); // Redirect to Dashboard
+        navigate('/dashboard');
       } else {
         setError('Invalid response from server');
       }
@@ -47,16 +55,7 @@ const Login = () => {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        flexDirection: 'column',
-        backgroundColor: '#f5f5f5', // Set light background color
-      }}
-    >
+    <Box sx={{ width: '100%', maxWidth: 400 }}>
       <Typography variant="h4" align="center" gutterBottom>
         Login
       </Typography>
@@ -67,7 +66,7 @@ const Login = () => {
         </Alert>
       )}
 
-      <Box component="form" onSubmit={handleSubmit} noValidate sx={{ width: '100%', maxWidth: 400 }}>
+      <Box component="form" onSubmit={handleSubmit} noValidate>
         <Grid container spacing={2}>
           <Grid item xs={12}>
             <TextField
@@ -109,7 +108,16 @@ const Login = () => {
           <Grid item xs={12} textAlign="center">
             <Typography variant="body2">
               Don't have an account?{' '}
-              <Link to="/register" style={{ textDecoration: 'none', color: '#1976d2' }}>
+              <Link 
+                component="button" 
+                type="button"
+                onClick={toggleAuthMode}
+                sx={{ 
+                  textDecoration: 'none',
+                  color: '#1976d2',
+                  cursor: 'pointer'
+                }}
+              >
                 Register here
               </Link>
             </Typography>

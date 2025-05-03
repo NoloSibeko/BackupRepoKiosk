@@ -15,7 +15,7 @@ import ProductList from '../components/ProductList';
 import { getProducts, createProduct } from '../api/product';
 import { getCategories } from '../api/category';
 
-const Products = () => {
+const Product = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -93,6 +93,26 @@ const Products = () => {
     }
   };
 
+  const handleDialogSubmit = async (updatedProduct) => {
+    try {
+      if (updatedProduct.id) {
+        // Update existing product
+        await updateProduct(updatedProduct.id, updatedProduct);
+        setProducts(
+          products.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+        ); // Update the product in the state
+      } else {
+        // Add new product
+        const newProduct = await createProduct(updatedProduct);
+        setProducts([...products, newProduct]); // Add the new product to the state
+      }
+      setOpenDialog(false); // Close the dialog
+    } catch (error) {
+      console.error('Failed to save product:', error);
+      alert('Failed to save product. Please try again.');
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -156,10 +176,9 @@ const Products = () => {
             alert(error.message || 'Failed to delete product'); // Show an error message
           }
         }}
-        onEdit={(updatedProduct) => {
-          setProducts(
-            products.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
-          ); // Replace the updated product in the state
+        onEdit={(product) => {
+          setSelectedProduct(product); // Set the selected product for editing
+          setOpenDialog(true); // Open the ProductFormDialog
         }}
       />
     </Grid>
@@ -243,4 +262,4 @@ const Products = () => {
   );
 };
 
-export default Products;
+export default Product;
