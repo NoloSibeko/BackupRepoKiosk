@@ -89,7 +89,7 @@ export const deleteProduct = async (id) => {
       throw new Error('Failed to delete product');
     }
 
-    // No content is returned for a successful delete (204 status)
+    // Nothing is returned for a successful delete 
     return true;
   } catch (error) {
     console.error('Error in deleteProduct:', error);

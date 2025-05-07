@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
- import { TextField, Button, Box, Grid } from '@mui/material';
+  // ProductForm.jsx
  import React, { useState, useEffect } from 'react';
  import { TextField, Button, Box, Grid, MenuItem, Typography, Alert } from '@mui/material';
  import { addProduct } from '../api/product';
@@ -42,9 +41,6 @@ import React, { useState } from 'react';
  
    const handleSubmit = async (e) => {
      e.preventDefault();
-     await addProduct(form);
-     onSuccess(); // Refresh product list
-     setForm({ name: '', description: '', price: '', categoryId: '' });
      setError('');
      try {
        const formData = new FormData();
@@ -73,9 +69,6 @@ import React, { useState } from 'react';
          <Grid item xs={6}><TextField label="Price" name="price" value={form.price} onChange={handleChange} type="number" fullWidth required /></Grid>
          <Grid item xs={6}><TextField label="Category ID" name="categoryId" value={form.categoryId} onChange={handleChange} fullWidth required /></Grid>
          <Grid item xs={12}><Button type="submit" variant="contained">Add Product</Button></Grid>
-         <Grid item xs={6}>
-           <TextField label="Name" name="name" value={form.name} onChange={handleChange} fullWidth required />
-         </Grid>
          <Grid item xs={6}>
            <TextField label="Description" name="description" value={form.description} onChange={handleChange} fullWidth required />
          </Grid>

@@ -11,6 +11,7 @@ import {
   Stack,
   Button,
 } from '@mui/material';
+import { getProducts, createProduct, updateProduct, deleteProduct } from '../api/product';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
@@ -18,18 +19,18 @@ import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
 const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
   const [flipped, setFlipped] = useState(false);
 
-  const handleDelete = async (id) => {
+  const handleFlip = () => {
+    setFlipped((prev) => !prev);
+  };
+
+  const handleDelete = async (e) => {
+    e.stopPropagation();
     try {
-      await deleteProduct(id); // Call the delete API
-      setProducts((prevProducts) => prevProducts.filter((product) => product.productID !== id)); // Update the state
+      await onDelete(product.productID);
     } catch (error) {
       console.error('Failed to delete product:', error);
       alert('Failed to delete product. Please try again.');
     }
-  };
-
-  const handleFlip = () => {
-    setFlipped((prev) => !prev);
   };
 
   return (
@@ -53,7 +54,7 @@ const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
           transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
         }}
       >
-        {/* Front Side */}
+        {/* Front of Card */}
         <Card
           sx={{
             position: 'absolute',
@@ -69,7 +70,6 @@ const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
             },
           }}
         >
-          {/* Image Section */}
           {product.imageURL ? (
             <CardMedia
               component="img"
@@ -99,93 +99,88 @@ const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
             </Box>
           )}
 
-          {/* Product Info */}
           <CardContent sx={{ flexGrow: 1, pb: 1 }}>
-  <Typography gutterBottom variant="h6" component="div" noWrap sx={{ mb: 0.5 }}>
-    {product.name}
-  </Typography>
+            <Typography gutterBottom variant="h6" noWrap sx={{ mb: 0.5 }}>
+              {product.name}
+            </Typography>
 
-  <Typography
-    variant="body2"
-    color="text.secondary"
-    sx={{
-      display: '-webkit-box',
-      WebkitLineClamp: 3,
-      WebkitBoxOrient: 'vertical',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-      minHeight: '3.6em',
-      mb: 1,
-    }}
-  >
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{
+                display: '-webkit-box',
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                minHeight: '3.6em',
+                mb: 1,
+              }}
+            >
+              {product.productdescription || 'No description available'}
+            </Typography>
 
-  </Typography>
-
-  <Stack direction="column" spacing={0.5}>
-    <Typography variant="body2" color="text.secondary">
-      <strong>Category:</strong> {product.categoryName || 'Uncategorized'}
-    </Typography>
-    <Typography variant="body1" color="primary">
-      <strong>R{product.price.toFixed(2)}</strong>
-    </Typography>
-  </Stack>
-</CardContent>
-
+            <Stack direction="column" spacing={0.5}>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Category:</strong> {product.categoryName || 'Uncategorized'}
+              </Typography>
+              <Typography variant="body1" color="primary">
+                <strong>R{product.price.toFixed(2)}</strong>
+              </Typography>
+            </Stack>
+          </CardContent>
         </Card>
-        {/* Back Side */}
-        <Card
-  sx={{
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backfaceVisibility: 'hidden',
-    transform: 'rotateY(180deg)',
-    backgroundColor: '#eeeeee',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    alignItems: 'center',
-    p: 2,
-    textAlign: 'center',
-  }}
->
-  <Typography variant="h6" gutterBottom>
-    {product.name}
-  </Typography>
-  <Typography variant="body2" color="text.secondary">
-    <strong>Category:</strong> {product.categoryName || 'Uncategorized'}
-  </Typography>
-  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-    <strong>Description:</strong> {product.Description || 'No description available'}
-  </Typography>
 
-  {isSuperuser && (
-    <CardActions sx={{ justifyContent: 'center', gap: 2 }}>
-      <Button
-        size="small"
-        variant="contained"
-        color="warning"
-        onClick={(e) => {
-          e.stopPropagation(); // Prevent the card's onClick event from firing
-          onEdit(product); // Pass the product to the onEdit function
-        }}
-      >
-        Edit
-      </Button>
-      <Button
-  size="small"
-  variant="contained"
-  color="error"
-  onClick={(e) => {
-    e.stopPropagation(); // Prevent the card's onClick event from firing
-    onDelete(product.productID); // Pass the correct product ID
-  }}
->
-  Delete
-</Button>
-    </CardActions>
-  )}
-</Card>
+        {/* Back of Card */}
+        <Card
+          sx={{
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            backfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)',
+            backgroundColor: '#eeeeee',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            p: 2,
+            textAlign: 'center',
+          }}
+        >
+          <Typography variant="h6" gutterBottom>
+            {product.name}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            <strong>Category:</strong> {product.categoryName || 'Uncategorized'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            <strong>Description:</strong> {product.productDescription || 'No description available'}
+          </Typography>
+
+          {isSuperuser && (
+            <CardActions sx={{ justifyContent: 'center', gap: 2, mt: 2 }}>
+              <Button
+                size="small"
+                variant="contained"
+                color="warning"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(product);
+                }}
+              >
+                Edit
+              </Button>
+              <Button
+                size="small"
+                variant="contained"
+                color="error"
+                onClick={handleDelete}
+              >
+                Delete
+              </Button>
+            </CardActions>
+          )}
+        </Card>
       </Box>
     </Box>
   );

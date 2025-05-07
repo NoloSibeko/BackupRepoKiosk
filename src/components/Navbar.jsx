@@ -43,12 +43,7 @@ const Navbar = () => {
     setProfileAnchorEl(null);
   };
 
-  const handleLogout = () => {
-    // Clear any authentication tokens or session data
-    localStorage.removeItem('authToken');
-    navigate('/login'); // Redirect to the login page
-  };
-
+ 
   return (
     <AppBar position="static" sx={{ mb: 4 }}>
       <Toolbar>
@@ -63,34 +58,11 @@ const Navbar = () => {
             color: 'inherit'
           }}
         >
-          MyKiosk
+          SIngular Kiosk
         </Typography>
 
         {/* Desktop Navigation */}
-        <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
-          <IconButton 
-            component={Link} 
-            to="/products" 
-            color="inherit"
-            size="large"
-            sx={{ mx: 1 }}
-          >
-            <Store />
-            <Typography variant="body2" sx={{ ml: 1 }}>Products</Typography>
-          </IconButton>
-
-          <IconButton 
-            component={Link} 
-            to="/cart" 
-            color="inherit"
-            size="large"
-            sx={{ mx: 1 }}
-          >
-            <Badge badgeContent={4} color="error">
-              <ShoppingCart />
-            </Badge>
-            <Typography variant="body2" sx={{ ml: 1 }}>Cart</Typography>
-          </IconButton>
+        <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
 
           <IconButton 
             component={Link} 

@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Navbar from './components/Navbar';
 import AuthPage from './pages/AuthPage';
 import Dashboard from './pages/Dashboard';
 import Product from './pages/Product';
@@ -17,7 +16,6 @@ function App() {
         <Route path="/register" element={<AuthPage />} />
         <Route path="/*" element={
           <>
-            <Navbar />
             <Routes>
               <Route path="/" element={<Dashboard />} />
               <Route path="/product" element={<Product />} />

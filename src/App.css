@@ -12,10 +12,10 @@
   transition: filter 300ms;
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: drop-shadow(0 0 2em #8B4513aa); /* Deep brown */
 }
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+  filter: drop-shadow(0 0 2em #8B4513aa); /* Deep brown */
 }
 
 @keyframes logo-spin {
@@ -38,11 +38,49 @@
 }
 
 .read-the-docs {
-  color: #888;
+  color: #8B4513; /* Deep brown */
 }
 
 body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* App.css */
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Replace blue colors with deep brown */
+.logo:hover {
+  filter: drop-shadow(0 0 2em #8B4513aa); /* Deep brown */
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #8B4513aa); /* Deep brown */
+}
+
+.card {
+  background-color: #8B4513; /* Deep brown */
+  color: white;
+}
+
+.read-the-docs {
+  color: #8B4513; /* Deep brown */
 }

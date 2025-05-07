@@ -18,7 +18,7 @@ const ProductFormDialog = ({ open, onClose, onSubmit, product, categories }) => 
     price: product?.price || '',
     quantity: product?.quantity || '',
     categoryId: product?.categoryId || '',
-    image: null, // Initialize image as null
+    image: null, // No image at first
   });
 
   useEffect(() => {
@@ -29,10 +29,12 @@ const ProductFormDialog = ({ open, onClose, onSubmit, product, categories }) => 
         price: product.price || '',
         quantity: product.quantity || '',
         categoryId: product.categoryId || '',
-        image: null, // Reset image when editing
+        image: null,
+        existingImageURL: product.imageURL || '',
       });
     }
   }, [product]);
+  
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -49,6 +51,10 @@ const ProductFormDialog = ({ open, onClose, onSubmit, product, categories }) => 
       alert('Please fill in all required fields');
       return;
     }
+    const dataToSubmit = {
+      ...formData,
+      productID: product?.productID || null, 
+    };
     onSubmit(formData);
   };
 
@@ -120,7 +126,15 @@ const ProductFormDialog = ({ open, onClose, onSubmit, product, categories }) => 
         </Button>
         {formData.image && (
           <Box sx={{ mt: 2 }}>
-            <Typography variant="body2">Selected File: {formData.image.name}</Typography>
+           {formData.image ? (
+  <Typography variant="body2">Selected File: {formData.image.name}</Typography>
+) : formData.existingImageURL ? (
+  <Box mt={2}>
+    <Typography variant="body2">Current Image:</Typography>
+    <img src={formData.existingImageURL} alt="Product" height={80} />
+  </Box>
+) : null}
+
           </Box>
         )}
       </DialogContent>
