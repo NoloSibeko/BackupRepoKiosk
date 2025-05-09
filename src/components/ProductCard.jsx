@@ -4,14 +4,12 @@ import {
   CardContent,
   CardMedia,
   Typography,
-  IconButton,
   CardActions,
   Box,
   Avatar,
   Stack,
   Button,
 } from '@mui/material';
-import { getProducts, createProduct, updateProduct, deleteProduct } from '../api/product';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
@@ -26,7 +24,7 @@ const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
   const handleDelete = async (e) => {
     e.stopPropagation();
     try {
-      await onDelete(product.productID);
+      await onDelete(product.productID); // Call the Delete API
     } catch (error) {
       console.error('Failed to delete product:', error);
       alert('Failed to delete product. Please try again.');
@@ -40,7 +38,7 @@ const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
         perspective: 1000,
         cursor: 'pointer',
         width: 300,
-        height: 370,
+        height: 400,
         mx: 'auto',
       }}
     >
@@ -116,12 +114,18 @@ const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
                 mb: 1,
               }}
             >
-              {product.productdescription || 'No description available'}
+              {product.description || 'No description available'}
             </Typography>
 
             <Stack direction="column" spacing={0.5}>
               <Typography variant="body2" color="text.secondary">
                 <strong>Category:</strong> {product.categoryName || 'Uncategorized'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Quantity:</strong> {product.quantity}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Available:</strong> {product.isAvailable ? 'Yes' : 'No'}
               </Typography>
               <Typography variant="body1" color="primary">
                 <strong>R{product.price.toFixed(2)}</strong>
@@ -154,7 +158,7 @@ const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
             <strong>Category:</strong> {product.categoryName || 'Uncategorized'}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            <strong>Description:</strong> {product.productDescription || 'No description available'}
+            <strong>Description:</strong> {product.description || 'No description available'}
           </Typography>
 
           {isSuperuser && (
@@ -165,19 +169,22 @@ const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
                 color="warning"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEdit(product);
+                  onEdit(product); // Call the Edit API
                 }}
               >
                 Edit
               </Button>
               <Button
-                size="small"
-                variant="contained"
-                color="error"
-                onClick={handleDelete}
-              >
-                Delete
-              </Button>
+  size="small"
+  variant="contained"
+  color={product.isAvailable ? 'error' : 'success'}
+  onClick={(e) => {
+    e.stopPropagation();
+    onToggleAvailability(product.id, !product.isAvailable); // Toggle availability
+  }}
+>
+  {product.isAvailable ? 'Mark Unavailable' : 'Mark Available'}
+</Button>
             </CardActions>
           )}
         </Card>

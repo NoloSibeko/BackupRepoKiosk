@@ -10,7 +10,7 @@ import {
   Alert,
 } from '@mui/material';
 import ProductCard from './ProductCard';
-import { getProducts, deleteProduct, createProduct } from '../api/product';
+import { getProducts, createProduct, updateProduct, toggleProductAvailability } from '../api/product';
 import { getCategories } from '../api/category';
 
 const ProductList = () => {
@@ -47,13 +47,12 @@ const ProductList = () => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleToggleAvailability = async (id, isAvailable) => {
     try {
-      await deleteProduct(id); // Call the delete API
-      setProducts((prevProducts) => prevProducts.filter((product) => product.productID !== id)); // Update the state
+      await toggleProductAvailability(id, isAvailable); // Use the correct function
+      console.log(`Product ${id} marked as ${isAvailable ? 'available' : 'unavailable'}`);
     } catch (error) {
-      console.error('Failed to delete product:', error);
-      alert('Failed to delete product. Please try again.');
+      console.error('Failed to toggle product availability:', error);
     }
   };
 

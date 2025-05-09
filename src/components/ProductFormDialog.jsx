@@ -18,6 +18,7 @@ const ProductFormDialog = ({ open, onClose, onSubmit, product, categories }) => 
     price: product?.price || '',
     quantity: product?.quantity || '',
     categoryId: product?.categoryId || '',
+    isAvailable: true,
     image: null, // No image at first
   });
 
@@ -29,7 +30,8 @@ const ProductFormDialog = ({ open, onClose, onSubmit, product, categories }) => 
         price: product.price || '',
         quantity: product.quantity || '',
         categoryId: product.categoryId || '',
-        image: null,
+        image:  product.imageURL || null, // Set existing image URL if available
+        isAvailable: Boolean (formData.isAvailable),
         existingImageURL: product.imageURL || '',
       });
     }
@@ -97,6 +99,7 @@ const ProductFormDialog = ({ open, onClose, onSubmit, product, categories }) => 
           onChange={handleInputChange}
         />
         <TextField
+        
   select
   label="Category"
   name="categoryId"

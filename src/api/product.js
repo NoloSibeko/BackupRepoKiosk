@@ -2,105 +2,64 @@ import axios from 'axios';
 
 const BASE_URL = 'https://localhost:7273/api/Product';
 
-const getAuthHeader = () => {
+// Axios instance with Authorization header
+const api = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add interceptor to include the JWT token in all requests
+api.interceptors.request.use((config) => {
   const token = localStorage.getItem('authToken');
-  return {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  };
-};
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 // Get all products
 export const getProducts = async () => {
-  const response = await fetch(`${BASE_URL}`, {
-    method: 'GET',
-    headers: getAuthHeader().headers,
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch products');
-  }
-
-  return await response.json();
+  const response = await api.get('/');
+  return response.data;
 };
 
+// Create a product
 export const createProduct = async (productData) => {
   const formData = new FormData();
-  formData.append('name', productData.name);
-  formData.append('description', productData.description);
-  formData.append('price', productData.price);
-  formData.append('quantity', productData.quantity);
-  formData.append('categoryId', productData.categoryId);
-  if (productData.image) {
-    formData.append('image', productData.image);
-  }
-
-  const response = await fetch(`${BASE_URL}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-    },
-    body: formData,
+  Object.keys(productData).forEach((key) => {
+    if (productData[key] !== null && productData[key] !== undefined) {
+      formData.append(key, productData[key]);
+    }
   });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to create product');
-  }
-
-  return await response.json();
+  const response = await api.post('/', formData);
+  return response.data;
 };
 
+// Update a product
 export const updateProduct = async (id, productData) => {
   const formData = new FormData();
-  formData.append('name', productData.name);
-  formData.append('description', productData.description);
-  formData.append('price', productData.price);
-  formData.append('quantity', productData.quantity);
-  formData.append('categoryId', productData.categoryId);
-  if (productData.image) {
-    formData.append('image', productData.image);
-  }
-
-  const response = await fetch(`${BASE_URL}/${id}`, {
-    method: 'PUT',
-    headers: getAuthHeader().headers, // Include auth header
-    body: formData,
+  Object.keys(productData).forEach((key) => {
+    if (productData[key] !== null && productData[key] !== undefined) {
+      formData.append(key, productData[key]);
+    }
   });
 
-  if (!response.ok) {
-    throw new Error('Failed to update product');
-  }
-
-  return await response.json();
+  const response = await api.put(`/${id}`, formData);
+  return response.data;
 };
 
-export const deleteProduct = async (id) => {
-  try {
-    const response = await fetch(`${BASE_URL}/${id}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to delete product');
-    }
-
-    // Nothing is returned for a successful delete 
-    return true;
-  } catch (error) {
-    console.error('Error in deleteProduct:', error);
-    throw error;
-  }
+// Toggle product availability
+export const toggleProductAvailability = async (id, isAvailable) => {
+  const response = await api.put(`/${id}/availability`, { isAvailable });
+  return response.data;
 };
 
-// Make sure all exports are included
 export default {
   getProducts,
   createProduct,
   updateProduct,
-  deleteProduct
+  toggleProductAvailability, // Export this function
 };

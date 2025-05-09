@@ -16,9 +16,11 @@ import { ShoppingCart } from '@mui/icons-material';
 import ProductCard from '../components/ProductCard';
 import ProductFormDialog from '../components/ProductFormDialog';
 import ProductModal from '../components/ProductModal';
-import { getProducts, createProduct, updateProduct, deleteProduct } from '../api/product';
+import { getProducts, createProduct, updateProduct, toggleProductAvailability } from '../api/product';
 import { getCategories, getCategoryWithProducts } from '../api/category';
 import { useNavigate } from 'react-router-dom';
+import SingularImage from '../images/SingularSocialSharingImage.png';
+
 
 const Dashboard = () => {
   const [products, setProducts] = useState([]);
@@ -93,15 +95,15 @@ const Dashboard = () => {
   };
 
   const handleEditProduct = (product) => {
-    setEditData(product);
-    setModalOpen(true);
+    setEditData(product); // Pass the product to be edited
+    setModalOpen(true); // Open the modal
   };
-
-  const handleDeleteProduct = async (id) => {
+  
+  const handleDeleteProduct = async (name) => {
     try {
-      await deleteProduct(id);
+      await deleteProduct(name); // Use the product name
       setSnackbarMsg('Product deleted successfully');
-      setProducts(products.filter((p) => p.id !== id));
+      setProducts(products.filter((p) => p.name !== name)); // Remove the product from the list
     } catch (error) {
       console.error('Failed to delete product:', error);
       setSnackbarMsg('Failed to delete product');
@@ -157,6 +159,18 @@ const Dashboard = () => {
     navigate('/cart');
   };
 
+  const handleToggleAvailability = async (name, isAvailable) => {
+    try {
+      await toggleProductAvailability(name, isAvailable); // Use the product name
+      setSnackbarMsg(`Product marked as ${isAvailable ? 'available' : 'unavailable'}`);
+      const refreshed = await getProducts();
+      setProducts(refreshed);
+    } catch (error) {
+      console.error('Failed to toggle product availability:', error);
+      setSnackbarMsg('Failed to update product availability');
+    }
+  };
+
   const filteredProducts = products.filter((product) => {
     const matchesSearch = [product.name, product.category?.name, product.description]
       .join(' ')
@@ -196,98 +210,142 @@ const Dashboard = () => {
           
         }}>
           <Paper elevation={3} sx={{ p: 4, flex: 1 }}>
-            <Typography variant="h4">Welcome to the Singular Kiosk</Typography>
-            <Typography variant="body2">This is your central hub, enjoy.</Typography>
-          </Paper>
-          
+          <Box
+    component="img"
+    src={SingularImage}
+    alt="Welcome to the Singular Kiosk"
+    sx={{
+      width: 300,
+      height: 200,
+      objectFit: 'cover'
+    }}
+    />
+
+          </Paper>  
           {/* Quick Actions */}
           <Paper elevation={3} sx={{ p: 4, width: '40%', flexShrink: 0 }}>
-            <Typography variant="h5" gutterBottom>Quick Actions</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Card
-                  onClick={handleCartClick}
-                  sx={{
-                    height: 150,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    cursor: 'pointer',
-                    backgroundColor: '#e3f2fd',
-                    '&:hover': { boxShadow: 4 },
-                  }}
-                >
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Badge badgeContent={cartItemsCount} color="error">
-                      <ShoppingCart fontSize="large" />
-                    </Badge>
-                    <Typography variant="h6" sx={{ mt: 1 }}>Cart</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
+  <Typography variant="h5" gutterBottom>
+    Quick Actions
+  </Typography>
+  <Grid container spacing={2}>
+    <Grid xs={6}>
+      <Card
+        onClick={handleCartClick}
+        sx={{
+          height: 150,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: 'pointer',
+          backgroundColor: '#C4A484',
+          '&:hover': { boxShadow: 4 },
+        }}
+      >
+        <CardContent sx={{ textAlign: 'center' }}>
+          <Badge badgeContent={cartItemsCount} color="error">
+            <ShoppingCart fontSize="large" />
+          </Badge>
+          <Typography variant="h6" sx={{ mt: 1 }}>
+            Cart
+          </Typography>
+        </CardContent>
+      </Card>
+    </Grid>
 
-              <Grid item xs={6}>
-                <Card
-                  onClick={() => navigate('/wallet')}
-                  sx={{
-                    height: 150,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    cursor: 'pointer',
-                    backgroundColor: '#e8f5e9',
-                    '&:hover': { boxShadow: 4 },
-                  }}
-                >
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h6" sx={{ mt: 1 }}>Wallet</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
+    <Grid sx={{ gridColumn: 'span 6' }}>
+      <Card
+        onClick={() => navigate('/wallet')}
+        sx={{
+          height: 150,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: 'pointer',
+          backgroundColor: '#9C8369',
+          '&:hover': { boxShadow: 4 },
+        }}
+      >
+        <CardContent sx={{ textAlign: 'center' }}>
+          <Typography variant="h6" sx={{ mt: 1 }}>
+            Wallet
+          </Typography>
+        </CardContent>
+      </Card>
+    </Grid>
 
-              <Grid item xs={6}>
-                <Card
-                  onClick={() => navigate('/transactions')}
-                  sx={{
-                    height: 150,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    cursor: 'pointer',
-                    backgroundColor: '#fff3e0',
-                    '&:hover': { boxShadow: 4 },
-                  }}
-                >
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h6" sx={{ mt: 1 }}>Transactions</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
+    <Grid xs={6}>
+      <Card
+        onClick={() => navigate('/transactions')}
+        sx={{
+          height: 150,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: 'pointer',
+          backgroundColor: '#75624F',
+          '&:hover': { boxShadow: 4 },
+        }}
+      >
+        <CardContent sx={{ textAlign: 'center' }}>
+          <Typography variant="h6" sx={{ mt: 1 }}>
+            Transactions
+          </Typography>
+        </CardContent>
+      </Card>
+    </Grid>
 
-              <Grid item xs={6}>
-                <Card
-                  onClick={() => navigate('/profile')}
-                  sx={{
-                    height: 150,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    cursor: 'pointer',
-                    backgroundColor: '#ede7f6',
-                    '&:hover': { boxShadow: 4 },
-                  }}
-                >
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h6" sx={{ mt: 1 }}>Profile</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Paper>
+    <Grid xs={6}>
+      <Card
+        onClick={() => navigate('/profile')}
+        sx={{
+          height: 150,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: 'pointer',
+          backgroundColor: '#27201A',
+          '&:hover': { boxShadow: 4 },
+        }}
+      >
+        <CardContent sx={{ textAlign: 'center' }}>
+          <Typography variant="h6" sx={{ mt: 1 }}>
+            Profile
+          </Typography>
+        </CardContent>
+      </Card>
+    </Grid>
+
+    {/* Logout Button */}
+    <Grid xs={6}>
+      <Card
+        onClick={() => {
+          localStorage.removeItem('authToken'); // Remove the token from localStorage
+          navigate('/login'); // Redirect to the login page
+        }}
+        sx={{
+          height: 150,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: 'pointer',
+          backgroundColor: '#D32F2F', // Red color for logout
+          '&:hover': { boxShadow: 4 },
+        }}
+      >
+        <CardContent sx={{ textAlign: 'center' }}>
+          <Typography variant="h6" sx={{ mt: 1, color: 'white' }}>
+            Logout
+          </Typography>
+        </CardContent>
+      </Card>
+    </Grid>
+  </Grid>
+</Paper>
         </Box>
 
         {/* Category Section */}
@@ -311,7 +369,7 @@ const Dashboard = () => {
                 ).length;
             
                 return (
-                  <Grid item xs={12} sm={6} md={3} key={category.id}>
+                  <Grid xs={12} sm={6} md={3} key={category.id}>
                     <Card
                       onClick={() => handleCategoryClick(category.categoryName)}
                       sx={{
@@ -377,17 +435,17 @@ const Dashboard = () => {
               <CircularProgress />
             ) : filteredProducts.length > 0 ? (
               <Grid container spacing={2}>
-                {filteredProducts.map((product) => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
-                    <ProductCard
-                      product={product}
-                      isSuperuser={true}
-                      onEdit={handleEditProduct}
-                      onDelete={handleDeleteProduct}
-                    />
-                  </Grid>
-                ))}
-              </Grid>
+  {filteredProducts.map((product) => (
+    <Grid key={product.id} sx={{ gridColumn: 'span 3' }}>
+      <ProductCard
+        product={product}
+        isSuperuser={true}
+        onEdit={handleEditProduct}
+        onToggleAvailability={handleToggleAvailability}
+      />
+    </Grid>
+  ))}
+</Grid>
             ) : (
               <Typography variant="body1" sx={{ textAlign: 'center', mt: 4 }}>
                 No products found matching your criteria
@@ -426,6 +484,14 @@ const Dashboard = () => {
         onSubmit={handleModalSubmit}
         categories={categories}
       />
+      <ProductModal
+  open={modalOpen}
+  onClose={() => setModalOpen(false)}
+  product={editData}
+  onSubmit={handleModalSubmit}
+  categories={categories}
+  products={products} // Pass the products array
+/>
       <Snackbar
         open={!!snackbarMsg}
         message={snackbarMsg}
