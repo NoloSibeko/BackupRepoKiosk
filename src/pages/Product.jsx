@@ -97,7 +97,9 @@ const Product = () => {
     try {
       if (updatedProduct.id) {
         // Update existing product
-        await updateProduct(updatedProduct.id, updatedProduct);
+        await updateProduct(product.id, product); // Use passed-in `product`
+
+
         setProducts(
           products.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
         ); // Update the product in the state

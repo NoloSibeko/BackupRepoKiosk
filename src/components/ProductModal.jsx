@@ -1,141 +1,167 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Modal,
-  Box,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   TextField,
   Button,
-  Typography,
   MenuItem,
+  Box,
+  Typography,
 } from '@mui/material';
 
-const style = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 400,
-  bgcolor: 'background.paper',
-  borderRadius: 2,
-  boxShadow: 24,
-  p: 4,
-};
-
-const ProductModal = ({ open, onClose, onSubmit, initialData, categories }) => {
-  const [form, setForm] = useState({
+const ProductModal = ({ open, onClose, onSubmit, product, categories }) => {
+  const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
     quantity: '',
     categoryId: '',
+    isAvailable: true,
     image: null,
+    existingImageURL: '',
   });
 
   useEffect(() => {
-    if (initialData) {
-      setForm({
-        name: initialData.name || '',
-        description: initialData.description || '',
-        price: initialData.price || '',
-        quantity: initialData.quantity || '',
-        categoryId: initialData.categoryId || '',
+    if (product) {
+      setFormData({
+        name: product.name || '',
+        description: product.description || '',
+        price: product.price || '',
+        quantity: product.quantity || '',
+        categoryId: product.categoryId || '',
+        isAvailable: product.isAvailable ?? true,
         image: null,
+        existingImageURL: product.imageURL || '',
+      });
+    } else {
+      setFormData({
+        name: '',
+        description: '',
+        price: '',
+        quantity: '',
+        categoryId: '',
+        isAvailable: true,
+        image: null,
+        existingImageURL: '',
       });
     }
-  }, [initialData]);
+  }, [product]);
 
-  const handleChange = (e) => {
-    const { name, value, files } = e.target;
-    if (name === 'image') {
-      setForm({ ...form, image: files[0] });
-    } else {
-      setForm({ ...form, [name]: value });
-    }
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-  
-    // Check if a product with the same name already exists
-    const isDuplicate = categories.some(
-      (existingProduct) =>
-        existingProduct.name.toLowerCase() === form.name.toLowerCase() &&
-        existingProduct.id !== initialData?.id // Allow editing the same product
-    );
-  
-    if (isDuplicate) {
-      alert('A product with this name already exists. Please use a different name.');
-      return;
-    }
-  
-    onSubmit(form);
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    setFormData((prev) => ({ ...prev, image: file }));
   };
+
+const handleSubmit = () => {
+  if (!formData.name || !formData.price || !formData.categoryId) {
+    alert('Please fill in all required fields');
+    return;
+  }
+
+  const data = new FormData();
+  data.append('Name', formData.name);
+  data.append('Description', formData.description);
+  data.append('Price', formData.price);
+  data.append('Quantity', formData.quantity);
+  data.append('CategoryID', formData.categoryId);
+  data.append('isAvailable', formData.isAvailable);
+  
+  if (formData.image) {
+    data.append('Image', formData.image);
+  }
+  
+  // Match backend's expected parameter name
+  if (product?.id) {
+    data.append('productID', product.id);
+  }
+
+  onSubmit(data);
+};
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <Box sx={style} component="form" onSubmit={handleSubmit}>
-        <Typography variant="h6" mb={2}>
-          {initialData ? 'Edit Product' : 'Add Product'}
-        </Typography>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>{product ? 'Edit Product' : 'Add Product'}</DialogTitle>
+      <DialogContent>
         <TextField
-          fullWidth
-          name="name"
           label="Name"
-          value={form.name}
-          onChange={handleChange}
+          name="name"
+          fullWidth
           margin="normal"
+          value={formData.name}
+          onChange={handleInputChange}
         />
         <TextField
-          fullWidth
-          name="description"
           label="Description"
-          value={form.description}
-          onChange={handleChange}
+          name="description"
+          fullWidth
           margin="normal"
-          multiline
-          rows={2}
+          value={formData.description}
+          onChange={handleInputChange}
         />
         <TextField
-          fullWidth
-          name="price"
           label="Price"
+          name="price"
           type="number"
-          value={form.price}
-          onChange={handleChange}
+          fullWidth
           margin="normal"
+          value={formData.price}
+          onChange={handleInputChange}
         />
         <TextField
-          fullWidth
-          name="quantity"
           label="Quantity"
+          name="quantity"
           type="number"
-          value={form.quantity}
-          onChange={handleChange}
+          fullWidth
           margin="normal"
+          value={formData.quantity}
+          onChange={handleInputChange}
         />
         <TextField
-          fullWidth
-          name="categoryId"
-          label="Category"
           select
-          value={form.categoryId}
-          onChange={handleChange}
+          label="Category"
+          name="categoryId"
+          fullWidth
           margin="normal"
+          value={formData.categoryId}
+          onChange={handleInputChange}
         >
-         {categories.map((cat) => (
-  <MenuItem key={cat.categoryID} value={cat.categoryID}>
-    {cat.categoryName}
-  </MenuItem>
-))}
+          {categories.map((category) => (
+            <MenuItem key={category.categoryID} value={category.categoryID}>
+              {category.categoryName}
+            </MenuItem>
+          ))}
         </TextField>
-        <Button variant="outlined" component="label" fullWidth sx={{ mt: 2 }}>
+
+        <Button variant="outlined" component="label" sx={{ mt: 2 }}>
           Upload Image
-          <input hidden type="file" name="image" onChange={handleChange} />
+          <input type="file" hidden accept="image/*" onChange={handleImageChange} />
         </Button>
-        <Button type="submit" variant="contained" color="primary" fullWidth sx={{ mt: 2 }}>
-          Submit
+
+        <Box sx={{ mt: 2 }}>
+          {formData.image ? (
+            <Typography variant="body2">Selected File: {formData.image.name}</Typography>
+          ) : formData.existingImageURL ? (
+            <>
+              <Typography variant="body2">Current Image:</Typography>
+              <img src={formData.existingImageURL} alt="Product" height={80} />
+            </>
+          ) : null}
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} color="secondary">Cancel</Button>
+        <Button onClick={handleSubmit} variant="contained" color="primary">
+          {product ? 'Update' : 'Add'}
         </Button>
-      </Box>
-    </Modal>
+      </DialogActions>
+    </Dialog>
   );
 };
 

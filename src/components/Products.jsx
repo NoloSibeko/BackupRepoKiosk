@@ -137,7 +137,8 @@ const Products = () => {
       }
 
       if (editingProduct) {
-        await updateProduct(editingProduct.id, formData);
+        await updateProduct(product.id, product); // Use passed-in `product`
+
       } else {
         await createProduct(formData);
       }

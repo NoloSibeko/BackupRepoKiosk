@@ -128,8 +128,9 @@ const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
                 <strong>Available:</strong> {product.isAvailable ? 'Yes' : 'No'}
               </Typography>
               <Typography variant="body1" color="primary">
-                <strong>R{product.price.toFixed(2)}</strong>
-              </Typography>
+  <strong>R{(product.price ? product.price.toFixed(2) : '0.00')}</strong>
+</Typography>
+
             </Stack>
           </CardContent>
         </Card>

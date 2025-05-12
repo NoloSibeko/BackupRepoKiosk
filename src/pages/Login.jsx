@@ -12,6 +12,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { login } from '../api/auth';
 
+
+
 const Login = ({ toggleAuthMode }) => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -53,6 +55,17 @@ const Login = ({ toggleAuthMode }) => {
       setIsLoading(false);
     }
   };
+
+  const handleLogin = async (credentials) => {
+  try {
+    const response = await login(credentials); // Call the login API
+    localStorage.setItem('authToken', response.token); // Store the token in localStorage
+    navigate('/dashboard'); // Redirect to the dashboard
+  } catch (error) {
+    console.error('Login failed:', error);
+    setError('Invalid credentials');
+  }
+};
 
   return (
     <Box sx={{ width: '100%', maxWidth: 400 }}>

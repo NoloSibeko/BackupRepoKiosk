@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import {
   Box,
   Typography,
@@ -55,7 +56,7 @@ const Dashboard = () => {
     fetchInitialData();
   }, []);
 
-  useEffect(() => {
+  /*useEffect(() => {
     const fetchData = async () => {
       try {
         const [catRes, prodRes] = await Promise.all([
@@ -78,7 +79,7 @@ const Dashboard = () => {
     };
   
     fetchData();
-  }, []);
+  }, []);*/
 
   const handleAddClick = () => {
     setSelectedProduct(null);
@@ -99,11 +100,11 @@ const Dashboard = () => {
     setModalOpen(true); // Open the modal
   };
   
-  const handleDeleteProduct = async (name) => {
+  const handleDeleteProduct = async (id) => {
     try {
-      await deleteProduct(name); // Use the product name
+      await deleteProduct(id); // Use the product name
       setSnackbarMsg('Product deleted successfully');
-      setProducts(products.filter((p) => p.name !== name)); // Remove the product from the list
+      setProducts(products.filter((p) => p.id !== id)); // Remove the product from the list
     } catch (error) {
       console.error('Failed to delete product:', error);
       setSnackbarMsg('Failed to delete product');
@@ -111,57 +112,97 @@ const Dashboard = () => {
   };
 
   const handleDialogSubmit = async (product) => {
-    try {
+  try {
+    // For new products (no id), check if name exists
+    if (!product.id) {
       const isDuplicate = products.some(
-        (existingProduct) =>
-          existingProduct.name.toLowerCase() === product.name.toLowerCase() &&
-          existingProduct.id !== product.id
+        (existingProduct) => 
+          existingProduct.name.toLowerCase() === product.name.toLowerCase()
       );
-  
+      
       if (isDuplicate) {
         setSnackbarMsg('A product with this name already exists.');
         return;
       }
-  
-      if (product.id) {
-        await updateProduct(product.id, product);
-        setSnackbarMsg('Product updated successfully');
-      } else {
-        const newProduct = await createProduct(product);
-        setSnackbarMsg('Product added successfully');
-        setProducts([...products, newProduct]);
-      }
-  
-      setOpenDialog(false);
-      const refreshed = await getProducts();
-      setProducts(refreshed);
-    } catch (error) {
-      console.error('Failed to save product:', error);
-      setSnackbarMsg('A product with this name already exists.');
     }
-  };
 
-  const handleModalSubmit = async (updatedProduct) => {
-    try {
-      await updateProduct(updatedProduct.id, updatedProduct);
+    if (product.id) {
+      // For existing products, check if name exists excluding current product
+      const isDuplicate = products.some(
+        (existingProduct) => 
+          existingProduct.name.toLowerCase() === product.name.toLowerCase() &&
+          existingProduct.id !== product.id
+      );
+      
+      if (isDuplicate) {
+        setSnackbarMsg('A product with this name already exists.');
+        return;
+      }
+      
+      await updateProduct(product.id, product); // Use passed-in `product`
       setSnackbarMsg('Product updated successfully');
-      setModalOpen(false);
-      setEditData(null);
-      const refreshed = await getProducts();
-      setProducts(refreshed);
-    } catch (error) {
-      console.error('Failed to update product:', error);
-      setSnackbarMsg(error.message || 'Failed to update product');
+    } else {
+      const newProduct = await createProduct(product);
+      setSnackbarMsg('Product added successfully');
+      setProducts([...products, newProduct]);
     }
-  };
+
+    setOpenDialog(false);
+    const refreshed = await getProducts();
+    setProducts(refreshed);
+  } catch (error) {
+    console.error('Failed to save product:', error);
+    setSnackbarMsg(error.message || 'Failed to save product');
+  }
+};
+
+const handleModalSubmit = async (formData) => {
+  try {
+    const isEdit = formData.has('productID');
+    let response;
+
+    if (isEdit) {
+      // UPDATE - Use PUT
+      const productId = formData.get('productID');
+      response = await axios.put(
+        `https://localhost:7273/api/Product/${productId}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          }
+        }
+      );
+      setSnackbarMsg('Product updated successfully');
+    } 
+
+    setModalOpen(false);
+    const refreshed = await getProducts();
+    setProducts(refreshed);
+  } catch (error) {
+    console.error('Failed to submit product:', error);
+    // Show more detailed error message
+    setSnackbarMsg(
+      error.response?.data?.message || 
+      error.response?.data?.title || 
+      'Failed to submit product. Please check all required fields.'
+    );
+  }
+};
+
+
+
+
+
 
   const handleCartClick = () => {
     navigate('/cart');
   };
 
-  const handleToggleAvailability = async (name, isAvailable) => {
+  const handleToggleAvailability = async (id, isAvailable) => {
     try {
-      await toggleProductAvailability(name, isAvailable); // Use the product name
+      await toggleProductAvailability(id, isAvailable); // Use the product id
       setSnackbarMsg(`Product marked as ${isAvailable ? 'available' : 'unavailable'}`);
       const refreshed = await getProducts();
       setProducts(refreshed);

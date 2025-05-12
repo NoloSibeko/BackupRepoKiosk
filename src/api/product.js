@@ -12,7 +12,7 @@ const api = axios.create({
 
 // Add interceptor to include the JWT token in all requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('authToken');
+  const token = localStorage.getItem('authToken'); // double-check the key
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -26,34 +26,32 @@ export const getProducts = async () => {
 };
 
 // Create a product
-export const createProduct = async (productData) => {
-  const formData = new FormData();
-  Object.keys(productData).forEach((key) => {
-    if (productData[key] !== null && productData[key] !== undefined) {
-      formData.append(key, productData[key]);
-    }
+export const createProduct = async (formData) => {
+  return await api.post('/', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
   });
+};
 
-  const response = await api.post('/', formData);
+// Update a product by ID (not name)
+export const updateProduct = async (productId, formData) => {
+  return await api.put(`/${productId}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+// Toggle product availability by ID
+export const toggleProductAvailability = async (productId, isAvailable) => {
+  const response = await api.put(`/${productId}/availability`, { isAvailable });
   return response.data;
 };
 
-// Update a product
-export const updateProduct = async (id, productData) => {
-  const formData = new FormData();
-  Object.keys(productData).forEach((key) => {
-    if (productData[key] !== null && productData[key] !== undefined) {
-      formData.append(key, productData[key]);
-    }
-  });
-
-  const response = await api.put(`/${id}`, formData);
-  return response.data;
-};
-
-// Toggle product availability
-export const toggleProductAvailability = async (id, isAvailable) => {
-  const response = await api.put(`/${id}/availability`, { isAvailable });
+// Delete a product by ID
+export const deleteProduct = async (productId) => {
+  const response = await api.delete(`/${productId}`);
   return response.data;
 };
 
@@ -61,5 +59,6 @@ export default {
   getProducts,
   createProduct,
   updateProduct,
-  toggleProductAvailability, // Export this function
+  toggleProductAvailability,
+  deleteProduct,
 };
