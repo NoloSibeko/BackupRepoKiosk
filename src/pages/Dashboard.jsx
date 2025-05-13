@@ -164,6 +164,13 @@ const handleModalSubmit = async (formData) => {
     if (isEdit) {
       // UPDATE - Use PUT
       const productId = formData.get('productID');
+      console.log('Attempting to update product with ID:', productId);
+      console.log('FormData contents:', {
+        name: formData.get('Name'),
+        price: formData.get('Price'),
+        categoryId: formData.get('CategoryID')
+      });
+
       response = await axios.put(
         `https://localhost:7273/api/Product/${productId}`,
         formData,
@@ -174,6 +181,8 @@ const handleModalSubmit = async (formData) => {
           }
         }
       );
+      
+      console.log('Update successful:', response.data);
       setSnackbarMsg('Product updated successfully');
     } 
 
@@ -181,13 +190,27 @@ const handleModalSubmit = async (formData) => {
     const refreshed = await getProducts();
     setProducts(refreshed);
   } catch (error) {
-    console.error('Failed to submit product:', error);
-    // Show more detailed error message
+    console.error('Failed to submit product:', {
+      error: error.response?.data || error.message,
+      config: error.config,
+      status: error.response?.status,
+      headers: error.response?.headers
+    });
+    
     setSnackbarMsg(
       error.response?.data?.message || 
       error.response?.data?.title || 
       'Failed to submit product. Please check all required fields.'
     );
+    
+    // Specific handling for edit failures
+    if (formData.has('productID')) {
+      console.error('Edit operation failed. Details:', {
+        productId: formData.get('productID'),
+        formData: Object.fromEntries(formData.entries()),
+        authToken: localStorage.getItem('authToken') ? 'exists' : 'missing'
+      });
+    }
   }
 };
 
@@ -200,17 +223,42 @@ const handleModalSubmit = async (formData) => {
     navigate('/cart');
   };
 
-  const handleToggleAvailability = async (id, isAvailable) => {
-    try {
-      await toggleProductAvailability(id, isAvailable); // Use the product id
-      setSnackbarMsg(`Product marked as ${isAvailable ? 'available' : 'unavailable'}`);
-      const refreshed = await getProducts();
-      setProducts(refreshed);
-    } catch (error) {
-      console.error('Failed to toggle product availability:', error);
-      setSnackbarMsg('Failed to update product availability');
+ const handleToggleAvailability = async (productId, isAvailable) => {
+  try {
+    if (!productId) {
+      console.error('Product ID is missing');
+      setSnackbarMsg('Failed to update product availability: Missing product ID.');
+      return;
     }
-  };
+
+    // Create FormData with just the availability boolean
+    const formData = new FormData();
+    formData.append('isAvailable', isAvailable);
+
+    // Optional: debug FormData contents safely
+    if (formData && formData.entries) {
+      console.log('FormData contents:', Object.fromEntries(formData.entries()));
+    } else {
+      console.warn('FormData is not defined correctly.');
+    }
+
+    await axios.put(`https://localhost:7273/api/Product/mark-available/${productId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+      },
+    });
+
+    setSnackbarMsg('Product availability updated successfully');
+    
+    const refreshedProducts = await getProducts();
+    setProducts(refreshedProducts);
+
+  } catch (error) {
+    console.error('Failed to update product availability:', error?.message || error);
+    setSnackbarMsg('Failed to update product availability. Please try again.');
+  }
+};
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = [product.name, product.category?.name, product.description]
@@ -503,6 +551,7 @@ const handleModalSubmit = async (formData) => {
         backgroundColor: '#1976d2', 
         color: 'white',
         flexShrink: 0,
+        width: '2150px',
         position: 'relative',
       }}>
         <Typography variant="body2">
@@ -531,7 +580,7 @@ const handleModalSubmit = async (formData) => {
   product={editData}
   onSubmit={handleModalSubmit}
   categories={categories}
-  products={products} // Pass the products array
+  products={products} // Pass the products
 />
       <Snackbar
         open={!!snackbarMsg}

@@ -38,7 +38,7 @@ export const createProduct = async (formData) => {
 export const updateProduct = async (productId, formData) => {
   return await api.put(`/${productId}`, formData, {
     headers: {
-      'Content-Type': 'multipart/form-data',
+      'Content-Type': 'application/json',
     },
   });
 };

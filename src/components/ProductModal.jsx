@@ -49,6 +49,21 @@ const ProductModal = ({ open, onClose, onSubmit, product, categories }) => {
     }
   }, [product]);
 
+  useEffect(() => {
+  const appRoot = document.getElementById('app-root'); // ID of your main app container
+
+  if (open && appRoot) {
+    appRoot.setAttribute('inert', 'true'); // Makes background content unfocusable & unreadable
+  } else if (appRoot) {
+    appRoot.removeAttribute('inert');
+  }
+
+  return () => {
+    if (appRoot) appRoot.removeAttribute('inert'); // Cleanup on unmount
+  };
+}, [open]);
+
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -59,35 +74,52 @@ const ProductModal = ({ open, onClose, onSubmit, product, categories }) => {
     setFormData((prev) => ({ ...prev, image: file }));
   };
 
-const handleSubmit = () => {
-  if (!formData.name || !formData.price || !formData.categoryId) {
-    alert('Please fill in all required fields');
+const handleSubmit = async () => {
+  if (!formData.name.trim() || !formData.price || !formData.categoryId) {
+    alert('Name, Price, and Category are required fields.');
     return;
   }
 
-  const data = new FormData();
-  data.append('Name', formData.name);
-  data.append('Description', formData.description);
-  data.append('Price', formData.price);
-  data.append('Quantity', formData.quantity);
-  data.append('CategoryID', formData.categoryId);
-  data.append('isAvailable', formData.isAvailable);
-  
-  if (formData.image) {
-    data.append('Image', formData.image);
-  }
-  
-  // Match backend's expected parameter name
-  if (product?.id) {
-    data.append('productID', product.id);
-  }
+  try {
+    const data = new FormData();
+    data.append('Name', formData.name);
+    data.append('Description', formData.description);
+    data.append('Price', formData.price);
+    data.append('Quantity', formData.quantity);
+    data.append('CategoryID', formData.categoryId);
+    data.append('isAvailable', formData.isAvailable);
+    if (formData.image) data.append('Image', formData.image);
+    if (product?.id) data.append('productID', product.id);
 
-  onSubmit(data);
+    await onSubmit(data);
+
+    setTimeout(() => {
+      const fallback = document.getElementById('focus-anchor');
+      if (fallback) fallback.focus(); // Move focus to the hidden anchor
+      onClose(); // Close the modal
+    }, 0);
+  } catch (error) {
+    console.error('Update failed:', error);
+    alert('Failed to update product.');
+  }
 };
 
+
+
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{product ? 'Edit Product' : 'Add Product'}</DialogTitle>
+    <Dialog
+  open={open}
+  onClose={() => {
+    onClose();
+    document.activeElement.blur(); // Remove focus from the currently focused element
+  }}
+  fullWidth
+  maxWidth="sm"
+  disableEnforceFocus // Prevents Material-UI from enforcing focus inside the modal
+  disableAutoFocus // Prevents Material-UI from automatically focusing the first focusable element
+>
+        
+      <DialogTitle>Edit Product</DialogTitle>
       <DialogContent>
         <TextField
           label="Name"
@@ -158,8 +190,12 @@ const handleSubmit = () => {
       <DialogActions>
         <Button onClick={onClose} color="secondary">Cancel</Button>
         <Button onClick={handleSubmit} variant="contained" color="primary">
-          {product ? 'Update' : 'Add'}
-        </Button>
+  Update
+</Button>
+<Button id="focus-anchor" sx={{ position: 'absolute', left: '-9999px' }}>
+  Hidden Anchor
+</Button>
+
       </DialogActions>
     </Dialog>
   );

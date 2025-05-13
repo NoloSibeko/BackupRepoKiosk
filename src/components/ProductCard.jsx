@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import axios from 'axios';
+
 import {
   Card,
   CardContent,
@@ -14,8 +16,9 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import ImageNotSupportedIcon from '@mui/icons-material/ImageNotSupported';
 
-const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
+const ProductCard = ({ product, isSuperuser, onDelete, onEdit, onToggleAvailability }) => {
   const [flipped, setFlipped] = useState(false);
+const [snackbarMsg, setSnackbarMsg] = useState('');
 
   const handleFlip = () => {
     setFlipped((prev) => !prev);
@@ -30,6 +33,49 @@ const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
       alert('Failed to delete product. Please try again.');
     }
   };
+
+const handleToggleAvailability = async (product, currentAvailability) => {
+  try {
+    const productId = product.productID; // Extract the product ID
+
+    if (!productId) {
+      console.error('Product ID is missing');
+      console.log('Product ID', productId); // Check productId
+      setSnackbarMsg('Failed to update product availability: Missing product ID.');
+      return;
+    }
+
+    const newAvailability = !currentAvailability; // toggle the value
+
+    console.log('New Availability:', newAvailability); // Check if it's a boolean
+    console.log('Product ID:', productId);  // Log productId to ensure it's the correct value
+
+    await axios.put(
+      `https://localhost:7273/api/Product/mark-available/${productId}`, // Use productId, not the whole product object
+      newAvailability, // Send the boolean directly
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      }
+    );
+
+    setSnackbarMsg(`Product marked as ${newAvailability ? "available" : "unavailable"}.`);
+
+    // const refreshedProducts = await getProducts();
+    // setProducts(refreshedProducts);
+
+  } catch (error) {
+    console.error('Failed to update product availability:', error?.message || error);
+    setSnackbarMsg('Failed to update product availability. Please try again.');
+  }
+};
+
+
+
+
+
 
   return (
     <Box
@@ -68,6 +114,7 @@ const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
             },
           }}
         >
+          {/* Product Image */}
           {product.imageURL ? (
             <CardMedia
               component="img"
@@ -128,9 +175,8 @@ const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
                 <strong>Available:</strong> {product.isAvailable ? 'Yes' : 'No'}
               </Typography>
               <Typography variant="body1" color="primary">
-  <strong>R{(product.price ? product.price.toFixed(2) : '0.00')}</strong>
-</Typography>
-
+                <strong>R{product.price ? product.price.toFixed(2) : '0.00'}</strong>
+              </Typography>
             </Stack>
           </CardContent>
         </Card>
@@ -175,17 +221,18 @@ const ProductCard = ({ product, isSuperuser, onDelete, onEdit }) => {
               >
                 Edit
               </Button>
-              <Button
+            <Button
   size="small"
   variant="contained"
   color={product.isAvailable ? 'error' : 'success'}
   onClick={(e) => {
     e.stopPropagation();
-    onToggleAvailability(product.id, !product.isAvailable); // Toggle availability
+    handleToggleAvailability(product, !product.isAvailable);
   }}
 >
   {product.isAvailable ? 'Mark Unavailable' : 'Mark Available'}
 </Button>
+
             </CardActions>
           )}
         </Card>

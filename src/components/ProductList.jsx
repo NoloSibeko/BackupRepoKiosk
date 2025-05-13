@@ -10,7 +10,11 @@ import {
   Alert,
 } from '@mui/material';
 import ProductCard from './ProductCard';
-import { getProducts, createProduct, updateProduct, toggleProductAvailability } from '../api/product';
+import ProductModal from './ProductModal';
+import {
+  getProducts,
+  createProduct,
+} from '../api/product';
 import { getCategories } from '../api/category';
 
 const ProductList = () => {
@@ -26,6 +30,10 @@ const ProductList = () => {
     image: null,
   });
   const [error, setError] = useState('');
+
+  // Modal state for editing
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const isSuperuser = localStorage.getItem('role') === 'Superuser';
 
@@ -44,15 +52,6 @@ const ProductList = () => {
       setCategories(data);
     } catch (err) {
       setError('Failed to load categories.');
-    }
-  };
-
-  const handleToggleAvailability = async (id, isAvailable) => {
-    try {
-      await toggleProductAvailability(id, isAvailable); // Use the correct function
-      console.log(`Product ${id} marked as ${isAvailable ? 'available' : 'unavailable'}`);
-    } catch (error) {
-      console.error('Failed to toggle product availability:', error);
     }
   };
 
@@ -79,6 +78,21 @@ const ProductList = () => {
     } catch (err) {
       setError('Failed to add product. Please try again.');
     }
+  };
+
+  const handleOpenEditModal = (product) => {
+    setSelectedProduct(product);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setSelectedProduct(null);
+    setIsEditModalOpen(false);
+  };
+
+  const handleProductUpdate = () => {
+    fetchProducts();
+    handleCloseEditModal();
   };
 
   useEffect(() => {
@@ -184,14 +198,24 @@ const ProductList = () => {
                 <ProductCard
                   product={product}
                   isSuperuser={isSuperuser}
-                  onDelete={handleDelete}
-                  onEdit={() => alert('Edit coming soon')}
+                  onDelete={() => {}} // Add deletion handler if needed
+                  onEdit={() => handleOpenEditModal(product)}
                 />
               </Grid>
             ))}
           </Grid>
         )}
       </Box>
+
+      {selectedProduct && (
+        <ProductModal
+          open={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          product={selectedProduct}
+          categories={categories}
+          onUpdate={handleProductUpdate}
+        />
+      )}
     </div>
   );
 };

@@ -116,6 +116,7 @@ const Products = () => {
   const handleEditClick = (product) => {
     setEditingProduct(product);
     setNewProduct({
+      productID: product.productID,
       name: product.name,
       description: product.description,
       price: product.price,
@@ -126,33 +127,34 @@ const Products = () => {
   };
 
   const handleSubmit = async () => {
-    try {
-      const formData = new FormData();
-      formData.append('name', newProduct.name);
-      formData.append('description', newProduct.description);
-      formData.append('price', parseFloat(newProduct.price));
-      formData.append('categoryId', parseInt(newProduct.categoryId));
-      if (newProduct.image) {
-        formData.append('image', newProduct.image);
-      }
-
-      if (editingProduct) {
-        await updateProduct(product.id, product); // Use passed-in `product`
-
-      } else {
-        await createProduct(formData);
-      }
-
-      setNewProduct({ name: '', description: '', price: 0, categoryId: '', image: null });
-      setError('');
-      handleCloseModal();
-      const updatedProducts = await getProducts();
-      setProducts(updatedProducts);
-      setFilteredProducts(updatedProducts);
-    } catch (err) {
-      setError('Failed to submit product. Please try again.');
+  try {
+    const formData = new FormData();
+    formData.append('name', newProduct.name);
+    formData.append('description', newProduct.description);
+    formData.append('price', parseFloat(newProduct.price));
+    formData.append('categoryId', parseInt(newProduct.categoryId));
+    if (newProduct.image) {
+      formData.append('image', newProduct.image);
     }
-  };
+
+    if (editingProduct) {
+      // Include the product ID for updates
+      formData.append('productID', newProduct.productID);
+      await updateProduct(newProduct.productID, formData);
+    } else {
+      await createProduct(formData);
+    }
+
+    setNewProduct({ name: '', description: '', price: 0, categoryId: '', image: null });
+    setError('');
+    handleCloseModal();
+    const updatedProducts = await getProducts();
+    setProducts(updatedProducts);
+    setFilteredProducts(updatedProducts);
+  } catch (err) {
+    setError('Failed to submit product. Please try again.');
+  }
+};
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
