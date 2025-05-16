@@ -9,9 +9,11 @@ import {
   MenuItem,
   Box,
   Typography,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 
-const ProductModal = ({ open, onClose, onSubmit, product, categories }) => {
+const ProductModal = ({ open, onClose = () => {}, onSubmit, product, categories = [] }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -36,33 +38,22 @@ const ProductModal = ({ open, onClose, onSubmit, product, categories }) => {
         existingImageURL: product.imageURL || '',
       });
     } else {
-      setFormData({
-        name: '',
-        description: '',
-        price: '',
-        quantity: '',
-        categoryId: '',
-        isAvailable: true,
-        image: null,
-        existingImageURL: '',
-      });
+      clearFormFields();
     }
   }, [product]);
 
-  useEffect(() => {
-  const appRoot = document.getElementById('app-root'); // ID of your main app container
-
-  if (open && appRoot) {
-    appRoot.setAttribute('inert', 'true'); // Makes background content unfocusable & unreadable
-  } else if (appRoot) {
-    appRoot.removeAttribute('inert');
-  }
-
-  return () => {
-    if (appRoot) appRoot.removeAttribute('inert'); // Cleanup on unmount
+  const clearFormFields = () => {
+    setFormData({
+      name: '',
+      description: '',
+      price: '',
+      quantity: '',
+      categoryId: '',
+      isAvailable: true,
+      image: null,
+      existingImageURL: '',
+    });
   };
-}, [open]);
-
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -71,55 +62,57 @@ const ProductModal = ({ open, onClose, onSubmit, product, categories }) => {
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    setFormData((prev) => ({ ...prev, image: file }));
+    if (file) {
+      setFormData((prev) => ({ ...prev, image: file }));
+    }
   };
 
-const handleSubmit = async () => {
-  if (!formData.name.trim() || !formData.price || !formData.categoryId) {
-    alert('Name, Price, and Category are required fields.');
-    return;
-  }
+  const handleSubmit = async () => {
+    if (!formData.name.trim() || !formData.price || !formData.categoryId) {
+      alert('Name, Price, and Category are required fields.');
+      return;
+    }
 
-  try {
-    const data = new FormData();
-    data.append('Name', formData.name);
-    data.append('Description', formData.description);
-    data.append('Price', formData.price);
-    data.append('Quantity', formData.quantity);
-    data.append('CategoryID', formData.categoryId);
-    data.append('isAvailable', formData.isAvailable);
-    if (formData.image) data.append('Image', formData.image);
-    if (product?.id) data.append('productID', product.id);
+    if (formData.price < 0 || formData.quantity < 0) {
+      alert('Price and Quantity must be non-negative.');
+      return;
+    }
 
-    await onSubmit(data);
+    try {
+      const data = new FormData();
+      data.append('Name', formData.name);
+      data.append('Description', formData.description);
+      data.append('Price', formData.price);
+      data.append('Quantity', formData.quantity);
+      data.append('CategoryID', formData.categoryId);
+      data.append('isAvailable', formData.isAvailable);
+      if (formData.image) data.append('Image', formData.image);
+      if (product?.id) data.append('productID', product.id);
 
-    setTimeout(() => {
-      const fallback = document.getElementById('focus-anchor');
-      if (fallback) fallback.focus(); // Move focus to the hidden anchor
-      onClose(); // Close the modal
-    }, 0);
-  } catch (error) {
-    console.error('Update failed:', error);
-    alert('Failed to update product.');
-  }
-};
-
-
+      await onSubmit(data);
+      onClose();
+    } catch (error) {
+      console.error('Update failed:', error);
+      alert('Failed to update product.');
+    }
+  };
 
   return (
     <Dialog
-  open={open}
-  onClose={() => {
-    onClose();
-    document.activeElement.blur(); // Remove focus from the currently focused element
-  }}
-  fullWidth
-  maxWidth="sm"
-  disableEnforceFocus // Prevents Material-UI from enforcing focus inside the modal
-  disableAutoFocus // Prevents Material-UI from automatically focusing the first focusable element
->
-        
-      <DialogTitle>Edit Product</DialogTitle>
+      open={open}
+      onClose={() => {
+        onClose();
+        document.activeElement?.blur();
+      }}
+      fullWidth
+      maxWidth="sm"
+      disableEnforceFocus
+      disableAutoFocus
+    >
+      <DialogTitle>
+        {`Edit Product${formData.name ? `: ${formData.name}` : ''}`}
+      </DialogTitle>
+
       <DialogContent>
         <TextField
           label="Name"
@@ -171,6 +164,23 @@ const handleSubmit = async () => {
           ))}
         </TextField>
 
+        <FormControlLabel
+          control={
+            <Switch
+              checked={formData.isAvailable}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  isAvailable: e.target.checked,
+                }))
+              }
+              color="primary"
+            />
+          }
+          label="Product is Available"
+          sx={{ mt: 2 }}
+        />
+
         <Button variant="outlined" component="label" sx={{ mt: 2 }}>
           Upload Image
           <input type="file" hidden accept="image/*" onChange={handleImageChange} />
@@ -178,7 +188,15 @@ const handleSubmit = async () => {
 
         <Box sx={{ mt: 2 }}>
           {formData.image ? (
-            <Typography variant="body2">Selected File: {formData.image.name}</Typography>
+            <>
+              <Typography variant="body2">Selected File: {formData.image.name}</Typography>
+              <img
+                src={URL.createObjectURL(formData.image)}
+                alt="Selected"
+                height={80}
+                style={{ marginTop: 8 }}
+              />
+            </>
           ) : formData.existingImageURL ? (
             <>
               <Typography variant="body2">Current Image:</Typography>
@@ -187,15 +205,14 @@ const handleSubmit = async () => {
           ) : null}
         </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} color="secondary">Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" color="primary">
-  Update
-</Button>
-<Button id="focus-anchor" sx={{ position: 'absolute', left: '-9999px' }}>
-  Hidden Anchor
-</Button>
 
+      <DialogActions>
+        <Button onClick={onClose} color="secondary">
+          Cancel
+        </Button>
+        <Button onClick={handleSubmit} variant="contained" color="primary">
+          Update
+        </Button>
       </DialogActions>
     </Dialog>
   );

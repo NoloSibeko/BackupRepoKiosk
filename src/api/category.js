@@ -55,7 +55,7 @@ export const getCategoryWithProducts = async (categoryName, setProducts) => {
       throw new Error(data.message || 'Failed to fetch');
     }
 
-    // ✅ This is now defined because we passed it in
+    //  This is now defined because we passed it in
     setProducts(data);
     return data;
   } catch (error) {

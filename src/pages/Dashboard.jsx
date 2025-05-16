@@ -7,23 +7,21 @@ import {
   Grid,
   CircularProgress,
   TextField,
-  Button,
   Snackbar,
   Badge,
   Card,
-  CardContent
+  CardContent,
+  Button,
 } from '@mui/material';
 import { ShoppingCart } from '@mui/icons-material';
-import ProductCard from '../components/ProductCard';
-import ProductFormDialog from '../components/ProductFormDialog';
-import ProductModal from '../components/ProductModal';
-import { getProducts, createProduct, updateProduct, toggleProductAvailability } from '../api/product';
+import ProductCard from '../components/ProductCard'; // Assume this handles individual product display
+import ProductFormDialog from '../components/ProductFormDialog'; // Add/edit product form modal
+import { getProducts, createProduct, updateProduct } from '../api/product';
 import { getCategories, getCategoryWithProducts } from '../api/category';
 import { useNavigate } from 'react-router-dom';
 import SingularImage from '../images/SingularSocialSharingImage.png';
 
-
-const Dashboard = () => {
+const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,23 +29,27 @@ const Dashboard = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [snackbarMsg, setSnackbarMsg] = useState('');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editData, setEditData] = useState(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [selectedCategoryName, setSelectedCategoryName] = useState(null);
   const [cartItemsCount, setCartItemsCount] = useState(0);
   const navigate = useNavigate();
 
+  // Fetch initial data
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
+        setLoading(true);
         const [productData, categoryData] = await Promise.all([
           getProducts(),
-          getCategories()
+          getCategories(),
         ]);
         setProducts(productData);
         setCategories(categoryData);
       } catch (error) {
         console.error('Failed to fetch data:', error);
+        setSnackbarMsg('Failed to fetch initial data.');
+        setSnackbarOpen(true);
       } finally {
         setLoading(false);
       }
@@ -56,493 +58,313 @@ const Dashboard = () => {
     fetchInitialData();
   }, []);
 
-  /*useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [catRes, prodRes] = await Promise.all([
-          fetch('https://localhost:7273/api/Category'),
-          fetch('https://localhost:7273/api/Product')
-        ]);
-  
-        const [catData, prodData] = await Promise.all([
-          catRes.json(),
-          prodRes.json()
-        ]);
-  
-        setCategories(catData);
-        setProducts(prodData);
-      } catch (error) {
-        console.error('Error loading categories or products:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-  
-    fetchData();
-  }, []);*/
+  // Sync modalOpen state with parentModalOpen prop
+  useEffect(() => {
+    if (parentModalOpen !== modalOpen) {
+      setModalOpen(parentModalOpen);
+    }
+  }, [parentModalOpen]);
 
+  // Handle search input changes
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // Open dialog for adding a product
   const handleAddClick = () => {
     setSelectedProduct(null);
     setOpenDialog(true);
   };
 
+  // Handle category click: filter products by categoryName
   const handleCategoryClick = async (categoryName) => {
+    setSelectedCategoryName(categoryName);
     try {
-      const result = await getCategoryWithProducts(categoryName, setProducts);
-      console.log('Fetched products:', result);
+      // If you want to fetch products per category from API (optional)
+      // const filteredProducts = await getCategoryWithProducts(categoryName);
+      // setProducts(filteredProducts);
+
+      // Or just filter client-side:
+      // setProducts(originalProducts.filter(p => p.categoryName === categoryName));
+      // Assuming you keep original products, for demo client-side filtering:
+      setLoading(true);
+      const allProducts = await getProducts();
+      setProducts(allProducts.filter(p => p.categoryName === categoryName));
     } catch (error) {
-      console.error('Error fetching category with products:', error);
+      console.error('Error fetching category products:', error);
+      setSnackbarMsg('Failed to filter products by category.');
+      setSnackbarOpen(true);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEditProduct = (product) => {
-    setEditData(product); // Pass the product to be edited
-    setModalOpen(true); // Open the modal
-  };
-  
-  const handleDeleteProduct = async (id) => {
-    try {
-      await deleteProduct(id); // Use the product name
-      setSnackbarMsg('Product deleted successfully');
-      setProducts(products.filter((p) => p.id !== id)); // Remove the product from the list
-    } catch (error) {
-      console.error('Failed to delete product:', error);
-      setSnackbarMsg('Failed to delete product');
-    }
-  };
-
+  // Handle dialog submit (add/edit product)
   const handleDialogSubmit = async (product) => {
-  try {
-    // For new products (no id), check if name exists
-    if (!product.id) {
-      const isDuplicate = products.some(
-        (existingProduct) => 
-          existingProduct.name.toLowerCase() === product.name.toLowerCase()
-      );
-      
-      if (isDuplicate) {
-        setSnackbarMsg('A product with this name already exists.');
-        return;
+    try {
+      if (product.id) {
+        // Edit existing
+        await updateProduct(product.id, product);
+        setSnackbarMsg('Product updated successfully');
+      } else {
+        // Add new
+        await createProduct(product);
+        setSnackbarMsg('Product added successfully');
       }
+      setOpenDialog(false);
+      const refreshed = await getProducts();
+      setProducts(refreshed);
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error('Save product error:', error);
+      setSnackbarMsg('Failed to save product');
+      setSnackbarOpen(true);
     }
-
-    if (product.id) {
-      // For existing products, check if name exists excluding current product
-      const isDuplicate = products.some(
-        (existingProduct) => 
-          existingProduct.name.toLowerCase() === product.name.toLowerCase() &&
-          existingProduct.id !== product.id
-      );
-      
-      if (isDuplicate) {
-        setSnackbarMsg('A product with this name already exists.');
-        return;
-      }
-      
-      await updateProduct(product.id, product); // Use passed-in `product`
-      setSnackbarMsg('Product updated successfully');
-    } else {
-      const newProduct = await createProduct(product);
-      setSnackbarMsg('Product added successfully');
-      setProducts([...products, newProduct]);
-    }
-
-    setOpenDialog(false);
-    const refreshed = await getProducts();
-    setProducts(refreshed);
-  } catch (error) {
-    console.error('Failed to save product:', error);
-    setSnackbarMsg(error.message || 'Failed to save product');
-  }
-};
-
-const handleModalSubmit = async (formData) => {
-  try {
-    const isEdit = formData.has('productID');
-    let response;
-
-    if (isEdit) {
-      // UPDATE - Use PUT
-      const productId = formData.get('productID');
-      console.log('Attempting to update product with ID:', productId);
-      console.log('FormData contents:', {
-        name: formData.get('Name'),
-        price: formData.get('Price'),
-        categoryId: formData.get('CategoryID')
-      });
-
-      response = await axios.put(
-        `https://localhost:7273/api/Product/${productId}`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-          }
-        }
-      );
-      
-      console.log('Update successful:', response.data);
-      setSnackbarMsg('Product updated successfully');
-    } 
-
-    setModalOpen(false);
-    const refreshed = await getProducts();
-    setProducts(refreshed);
-  } catch (error) {
-    console.error('Failed to submit product:', {
-      error: error.response?.data || error.message,
-      config: error.config,
-      status: error.response?.status,
-      headers: error.response?.headers
-    });
-    
-    setSnackbarMsg(
-      error.response?.data?.message || 
-      error.response?.data?.title || 
-      'Failed to submit product. Please check all required fields.'
-    );
-    
-    // Specific handling for edit failures
-    if (formData.has('productID')) {
-      console.error('Edit operation failed. Details:', {
-        productId: formData.get('productID'),
-        formData: Object.fromEntries(formData.entries()),
-        authToken: localStorage.getItem('authToken') ? 'exists' : 'missing'
-      });
-    }
-  }
-};
-
-
-
-
-
-
-  const handleCartClick = () => {
-    navigate('/cart');
   };
 
- const handleToggleAvailability = async (productId, isAvailable) => {
-  try {
-    if (!productId) {
-      console.error('Product ID is missing');
-      setSnackbarMsg('Failed to update product availability: Missing product ID.');
-      return;
-    }
+  // Close snackbar
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+  };
 
-    // Create FormData with just the availability boolean
-    const formData = new FormData();
-    formData.append('isAvailable', isAvailable);
-
-    // Optional: debug FormData contents safely
-    if (formData && formData.entries) {
-      console.log('FormData contents:', Object.fromEntries(formData.entries()));
-    } else {
-      console.warn('FormData is not defined correctly.');
-    }
-
-    await axios.put(`https://localhost:7273/api/Product/mark-available/${productId}`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-      },
-    });
-
-    setSnackbarMsg('Product availability updated successfully');
-    
-    const refreshedProducts = await getProducts();
-    setProducts(refreshedProducts);
-
-  } catch (error) {
-    console.error('Failed to update product availability:', error?.message || error);
-    setSnackbarMsg('Failed to update product availability. Please try again.');
-  }
-};
-
+  // Filter products based on search and category
   const filteredProducts = products.filter((product) => {
-    const matchesSearch = [product.name, product.category?.name, product.description]
+    const searchStr = [product.name, product.categoryName, product.description]
+      .filter(Boolean)
       .join(' ')
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+      .toLowerCase();
 
-    const matchesCategory = selectedCategoryId
-      ? product.categoryId === selectedCategoryId
+    const matchesSearch = searchStr.includes(searchTerm.toLowerCase());
+
+    const matchesCategory = selectedCategoryName
+      ? product.categoryName === selectedCategoryName
       : true;
 
     return matchesSearch && matchesCategory;
   });
 
   return (
-    <Box sx={{ 
-      display: 'flex',
-      flexDirection: 'column',
-      minHeight: '100vh',
-      backgroundColor: '#f5f5f5'
-    }}>
-      {/* Main Content Area */}
-      <Box sx={{
-        flex: 1,
-        p: 3,
+    <Box
+      sx={{
         display: 'flex',
         flexDirection: 'column',
-        minHeight: 0,
-        overflow: 'hidden'
-      }}>
-        {/* Header Section */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          mb: 4,
-          gap: 3,
-          flexShrink: 0
-          
-        }}>
-          <Paper elevation={3} sx={{ p: 4, flex: 1 }}>
+        minHeight: '100vh',
+        backgroundColor: '#f5f5f5',
+        px: 3,
+        py: 4,
+      }}
+    >
+      {/* Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, gap: 3 }}>
+        <Paper elevation={3} sx={{ p: 2, flex: 1 }}>
           <Box
-    component="img"
-    src={SingularImage}
-    alt="Welcome to the Singular Kiosk"
-    sx={{
-      width: 300,
-      height: 200,
-      objectFit: 'cover'
-    }}
-    />
+            component="img"
+            src={SingularImage}
+            alt="Welcome to the Singular Kiosk"
+            sx={{ width: '100%', maxWidth: 350, height: 200, objectFit: 'cover' }}
+          />
+        </Paper>
 
-          </Paper>  
-          {/* Quick Actions */}
-          <Paper elevation={3} sx={{ p: 4, width: '40%', flexShrink: 0 }}>
-  <Typography variant="h5" gutterBottom>
-    Quick Actions
-  </Typography>
-  <Grid container spacing={2}>
-    <Grid xs={6}>
-      <Card
-        onClick={handleCartClick}
+        {/* Quick Actions */}
+        <Paper elevation={3} sx={{ p: 2, width: 400, flexShrink: 0 }}>
+          <Typography variant="h5" gutterBottom>
+            Quick Actions
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={6}>
+              <Card
+                onClick={() => navigate('/cart')}
+                sx={{
+                  height: 140,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  backgroundColor: '#C4A484',
+                  '&:hover': { boxShadow: 4 },
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center' }}>
+                  <Badge badgeContent={cartItemsCount} color="error">
+                    <ShoppingCart fontSize="large" />
+                  </Badge>
+                  <Typography variant="h6" sx={{ mt: 1 }}>
+                    Cart
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={6}>
+              <Card
+                onClick={() => navigate('/wallet')}
+                sx={{
+                  height: 140,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  backgroundColor: '#9C8369',
+                  '&:hover': { boxShadow: 4 },
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center' }}>
+                  <Typography variant="h6">Wallet</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={6}>
+              <Card
+                onClick={() => navigate('/transactions')}
+                sx={{
+                  height: 140,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  backgroundColor: '#75624F',
+                  '&:hover': { boxShadow: 4 },
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center' }}>
+                  <Typography variant="h6">Transactions</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={6}>
+              <Card
+                onClick={() => navigate('/profile')}
+                sx={{
+                  height: 140,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  backgroundColor: '#27201A',
+                  color: '#fff',
+                  '&:hover': { boxShadow: 4 },
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center' }}>
+                  <Typography variant="h6">Profile</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Button
+                fullWidth
+                variant="contained"
+                color="error"
+                onClick={() => {
+                  localStorage.removeItem('authToken');
+                  navigate('/login');
+                }}
+                sx={{ height: 50 }}
+              >
+                Logout
+              </Button>
+            </Grid>
+          </Grid>
+        </Paper>
+      </Box>
+
+      {/* Search and Add Product */}
+      <Box
         sx={{
-          height: 150,
           display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          cursor: 'pointer',
-          backgroundColor: '#C4A484',
-          '&:hover': { boxShadow: 4 },
+          justifyContent: 'space-between',
+          mb: 3,
+          maxWidth: 900,
+          width: '100%',
         }}
       >
-        <CardContent sx={{ textAlign: 'center' }}>
-          <Badge badgeContent={cartItemsCount} color="error">
-            <ShoppingCart fontSize="large" />
-          </Badge>
-          <Typography variant="h6" sx={{ mt: 1 }}>
-            Cart
-          </Typography>
-        </CardContent>
-      </Card>
-    </Grid>
+        <TextField
+          variant="outlined"
+          label="Search products..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+          sx={{ flex: 1, mr: 2 }}
+        />
+        <Button variant="contained" onClick={handleAddClick}>
+          Add Product
+        </Button>
+      </Box>
 
-    <Grid sx={{ gridColumn: 'span 6' }}>
-      <Card
-        onClick={() => navigate('/wallet')}
+      {/* Categories */}
+      <Box
         sx={{
-          height: 150,
           display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          cursor: 'pointer',
-          backgroundColor: '#9C8369',
-          '&:hover': { boxShadow: 4 },
-        }}
-      >
-        <CardContent sx={{ textAlign: 'center' }}>
-          <Typography variant="h6" sx={{ mt: 1 }}>
-            Wallet
-          </Typography>
-        </CardContent>
-      </Card>
-    </Grid>
-
-    <Grid xs={6}>
-      <Card
-        onClick={() => navigate('/transactions')}
-        sx={{
-          height: 150,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          cursor: 'pointer',
-          backgroundColor: '#75624F',
-          '&:hover': { boxShadow: 4 },
-        }}
-      >
-        <CardContent sx={{ textAlign: 'center' }}>
-          <Typography variant="h6" sx={{ mt: 1 }}>
-            Transactions
-          </Typography>
-        </CardContent>
-      </Card>
-    </Grid>
-
-    <Grid xs={6}>
-      <Card
-        onClick={() => navigate('/profile')}
-        sx={{
-          height: 150,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          cursor: 'pointer',
-          backgroundColor: '#27201A',
-          '&:hover': { boxShadow: 4 },
-        }}
-      >
-        <CardContent sx={{ textAlign: 'center' }}>
-          <Typography variant="h6" sx={{ mt: 1 }}>
-            Profile
-          </Typography>
-        </CardContent>
-      </Card>
-    </Grid>
-
-    {/* Logout Button */}
-    <Grid xs={6}>
-      <Card
-        onClick={() => {
-          localStorage.removeItem('authToken'); // Remove the token from localStorage
-          navigate('/login'); // Redirect to the login page
-        }}
-        sx={{
-          height: 150,
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          cursor: 'pointer',
-          backgroundColor: '#D32F2F', // Red color for logout
-          '&:hover': { boxShadow: 4 },
-        }}
-      >
-        <CardContent sx={{ textAlign: 'center' }}>
-          <Typography variant="h6" sx={{ mt: 1, color: 'white' }}>
-            Logout
-          </Typography>
-        </CardContent>
-      </Card>
-    </Grid>
-  </Grid>
-</Paper>
-        </Box>
-
-        {/* Category Section */}
-        <Paper elevation={3} sx={{
-          p: 2,
-          width: 1100,
-          maxHeight: 250,
-          overflowY: 'auto',
-          backgroundColor: '#fafafa',
+          gap: 2,
+          overflowX: 'auto',
+          maxWidth: 900,
           mb: 4,
-          flexShrink: 0
-        }}>
-          <Typography variant="h5" gutterBottom>Categories</Typography>
+          px: 1,
+          py: 1,
+          bgcolor: '#eee',
+          borderRadius: 1,
+        }}
+      >
+        <Button
+          variant={!selectedCategoryName ? 'contained' : 'outlined'}
+          onClick={() => {
+            setSelectedCategoryName(null);
+            // Reload all products
+            setLoading(true);
+            getProducts()
+              .then(setProducts)
+              .catch(() => {
+                setSnackbarMsg('Failed to reload products.');
+                setSnackbarOpen(true);
+              })
+              .finally(() => setLoading(false));
+          }}
+        >
+          All
+        </Button>
+        {categories.map((cat) => (
+          <Button
+            key={cat.id}
+            variant={selectedCategoryName === cat.categoryName ? 'contained' : 'outlined'}
+            onClick={() => handleCategoryClick(cat.categoryName)}
+          >
+            {cat.categoryName}
+          </Button>
+        ))}
+      </Box>
+
+              {/* Product Grid Section */}
+        <Box sx={{ flex: 1, width: '100%' }}>
           {loading ? (
             <CircularProgress />
           ) : (
-            <Grid container spacing={2}>
-              {categories.map((category) => {
-                const productCount = products.filter(
-                  (p) => p.categoryName?.toLowerCase() === category.categoryName?.toLowerCase()
-                ).length;
-            
-                return (
-                  <Grid xs={12} sm={6} md={3} key={category.id}>
-                    <Card
-                      onClick={() => handleCategoryClick(category.categoryName)}
-                      sx={{
-                        height: 80,
-                        width: 250,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        backgroundColor: '#e3f2fd',
-                        cursor: 'pointer',
-                        '&:hover': { boxShadow: 4 }
+            <Grid container spacing={3}>
+              {filteredProducts.length > 0 ? (
+                filteredProducts.map((product) => (
+                  <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
+                    <ProductCard
+                      product={product}
+                      onEdit={() => {
+                        setSelectedProduct(product);
+                        setOpenDialog(true);
                       }}
-                    >
-                      <CardContent sx={{ textAlign: 'center' }}>
-                        <Typography variant="h6">{category.categoryName}</Typography>
-                        <Typography variant="body2">
-                          {productCount} {productCount === 1 ? 'product' : 'products'}
-                        </Typography>
-                      </CardContent>
-                    </Card>
+                    />
                   </Grid>
-                );
-              })}
+                ))
+              ) : (
+                <Typography variant="h6" sx={{ m: 2 }}>
+                  No products match your search.
+                </Typography>
+              )}
             </Grid>
           )}
-        </Paper>
-
-        {/* Products Section */}
-        <Paper elevation={3} sx={{ 
-          p: 4, 
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 400,
-          overflow: 'hidden'
-        }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            mb: 2,
-            flexShrink: 0 
-          }}>
-            <Typography variant="h5">Available Products</Typography>
-            <Button variant="contained" onClick={handleAddClick}>+ Add Product</Button>
-          </Box>
-          
-          <TextField
-            fullWidth
-            placeholder="Search products..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            sx={{ mb: 2, flexShrink: 0 }}
-          />
-          
-          {/* Scrollable Products Grid */}
-          <Box sx={{ 
-            flex: 1,
-            overflowY: 'auto',
-            minHeight: 300
-          }}>
-            {loading ? (
-              <CircularProgress />
-            ) : filteredProducts.length > 0 ? (
-              <Grid container spacing={2}>
-  {filteredProducts.map((product) => (
-    <Grid key={product.id} sx={{ gridColumn: 'span 3' }}>
-      <ProductCard
-        product={product}
-        isSuperuser={true}
-        onEdit={handleEditProduct}
-        onToggleAvailability={handleToggleAvailability}
-      />
-    </Grid>
-  ))}
-</Grid>
-            ) : (
-              <Typography variant="body1" sx={{ textAlign: 'center', mt: 4 }}>
-                No products found matching your criteria
-              </Typography>
-            )}
-          </Box>
-        </Paper>
-      </Box>
+        </Box>
 
       {/* Footer */}
       <Box sx={{ 
@@ -559,34 +381,24 @@ const handleModalSubmit = async (formData) => {
         </Typography>
       </Box>
 
-      {/* Modals and Snackbar */}
-      <ProductFormDialog
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        onSubmit={handleDialogSubmit}
-        product={selectedProduct}
-        categories={categories}
-      />
-      <ProductModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        product={editData}
-        onSubmit={handleModalSubmit}
-        categories={categories}
-      />
-      <ProductModal
-  open={modalOpen}
-  onClose={() => setModalOpen(false)}
-  product={editData}
-  onSubmit={handleModalSubmit}
-  categories={categories}
-  products={products} // Pass the products
-/>
+      {/* Product Form Dialog */}
+      {openDialog && (
+        <ProductFormDialog
+          open={openDialog}
+          onClose={() => setOpenDialog(false)}
+          onSubmit={handleDialogSubmit}
+          product={selectedProduct}
+          categories={categories}
+        />
+      )}
+      
+      {/* Snackbar */}
       <Snackbar
-        open={!!snackbarMsg}
+        open={snackbarOpen}
+        autoHideDuration={3500}
         message={snackbarMsg}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarMsg('')}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </Box>
   );
