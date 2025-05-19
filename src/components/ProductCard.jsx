@@ -6,12 +6,13 @@ import {
   CardActions,
   Button,
   Typography,
-  Box
+  Box,
+  Stack
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
-import ProductFormDialog from './ProductFormDialog';
+import EditProductFormDialog from './EditProductFormDialog';
 
-const ProductCard = ({ product, updateProductAvailability }) => {
+const ProductCard = ({ product, updateProductAvailability, categories, onProductUpdated }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -26,7 +27,10 @@ const ProductCard = ({ product, updateProductAvailability }) => {
 
   const handleToggleAvailability = (e) => {
     e.stopPropagation();
-    updateProductAvailability(product.productID, !product.isAvailable);
+    if (updateProductAvailability) {
+      updateProductAvailability(product.productID || product.id, !product.isAvailable);
+      if (onProductUpdated) onProductUpdated();
+    }
   };
 
   return (
@@ -58,14 +62,40 @@ const ProductCard = ({ product, updateProductAvailability }) => {
               alt={product.name}
               sx={{ objectFit: 'cover' }}
             />
-            <CardContent>
-              <Typography variant="h6" noWrap>{product.name}</Typography>
-              <Typography variant="body2" color="text.secondary" noWrap>
-                {product.description}
+            <CardContent sx={{ flexGrow: 1, pb: 1 }}>
+              <Typography gutterBottom variant="h6" noWrap sx={{ mb: 0.5 }}>
+                {product.name}
               </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  display: '-webkit-box',
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  minHeight: '3.6em',
+                  mb: 0,
+                }}
+              >
+                {product.description || 'No description available'}
+              </Typography>
+              
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Category:</strong> {product.categoryName || 'Uncategorized'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Quantity:</strong> {product.quantity}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>Available:</strong> {product.isAvailable ? 'Yes' : 'No'}
+                </Typography>
+                <Typography variant="body1" color="primary">
+                  <strong>R{product.price ? product.price.toFixed(2) : '0.00'}</strong>
+                </Typography>
+              
             </CardContent>
           </Card>
-
           {/* Back */}
           <Card
             sx={{
@@ -108,12 +138,15 @@ const ProductCard = ({ product, updateProductAvailability }) => {
           </Card>
         </Box>
       </Box>
-
-      <ProductFormDialog
+      <EditProductFormDialog
         open={editOpen}
-        handleClose={handleEditClose}
-        mode="edit"
+        onClose={handleEditClose}
         product={product}
+        categories={categories}
+        onUpdate={() => {
+          handleEditClose();
+          if (onProductUpdated) onProductUpdated();
+        }}
       />
     </>
   );

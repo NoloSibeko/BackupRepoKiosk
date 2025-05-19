@@ -36,6 +36,19 @@ export const login = async (credentials) => {
   }
 };
 
+export const getUserIdFromToken = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.UserId || payload.userId || payload.sub;
+  } catch (error) {
+    console.error('Invalid token:', error);
+    return null;
+  }
+};
+
+
 export const logout = () => {
   localStorage.removeItem('authToken');
 };

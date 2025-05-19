@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import {
   Box,
   Typography,
@@ -12,14 +11,17 @@ import {
   Card,
   CardContent,
   Button,
+  Alert
 } from '@mui/material';
 import { ShoppingCart } from '@mui/icons-material';
-import ProductCard from '../components/ProductCard'; // Assume this handles individual product display
-import ProductFormDialog from '../components/ProductFormDialog'; // Add/edit product form modal
+import axios from 'axios';
+import ProductCard from '../components/ProductCard';
+import ProductFormDialog from '../components/ProductFormDialog';
 import { getProducts, createProduct, updateProduct } from '../api/product';
-import { getCategories, getCategoryWithProducts } from '../api/category';
+import { getCategories } from '../api/category';
 import { useNavigate } from 'react-router-dom';
 import SingularImage from '../images/SingularSocialSharingImage.png';
+import WalletModal from '../components/WalletModal';
 
 const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
   const [products, setProducts] = useState([]);
@@ -33,65 +35,94 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCategoryName, setSelectedCategoryName] = useState(null);
   const [cartItemsCount, setCartItemsCount] = useState(0);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [userId, setUserId] = useState(null);
   const navigate = useNavigate();
+  const userRole = localStorage.getItem("userRole"); // 'User' or 'Superuser'
+const isSuperuser = userRole === "Superuser";
 
-  // Fetch initial data
+
   useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        setLoading(true);
-        const [productData, categoryData] = await Promise.all([
-          getProducts(),
-          getCategories(),
-        ]);
-        setProducts(productData);
-        setCategories(categoryData);
-      } catch (error) {
-        console.error('Failed to fetch data:', error);
-        setSnackbarMsg('Failed to fetch initial data.');
-        setSnackbarOpen(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInitialData();
+    // Get user ID from token or auth context
+    const token = localStorage.getItem('jwtToken');
+    if (token) {
+      // Implement your getUserIdFromToken function or use auth context
+      const id = parseJwt(token).userID; // Example implementation
+      setUserId(id);
+    }
   }, []);
 
-  // Sync modalOpen state with parentModalOpen prop
+  // Helper function to parse JWT
+  function parseJwt(token) {
+    try {
+      return JSON.parse(atob(token.split('.')[1]));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  const fetchInitialData = async () => {
+    try {
+      setLoading(true);
+      
+      // First get products and categories
+      const [productData, categoryData] = await Promise.all([
+        getProducts(),
+        getCategories()
+      ]);
+      
+      setProducts(productData);
+      setCategories(categoryData);
+
+      // Then try to get wallet balance if user is authenticated
+      if (userId) {
+        try {
+          const walletResponse = await axios.get(`/api/Wallet/${userId}/Balance`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+            }
+          });
+          setWalletBalance(walletResponse.data.balance);
+        } catch (walletError) {
+          console.error("Wallet error:", walletError);
+          setSnackbarMsg('Failed to load wallet balance');
+          setSnackbarOpen(true);
+        }
+      }
+    } catch (error) {
+      console.error("Initial data error:", error);
+      setSnackbarMsg('Failed to fetch initial data. Please try again later.');
+      setSnackbarOpen(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInitialData();
+  }, [userId]);
+
   useEffect(() => {
     if (parentModalOpen !== modalOpen) {
       setModalOpen(parentModalOpen);
     }
   }, [parentModalOpen]);
 
-  // Handle search input changes
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
+  const handleSearchChange = (e) => setSearchTerm(e.target.value);
 
-  // Open dialog for adding a product
   const handleAddClick = () => {
     setSelectedProduct(null);
     setOpenDialog(true);
   };
 
-  // Handle category click: filter products by categoryName
   const handleCategoryClick = async (categoryName) => {
     setSelectedCategoryName(categoryName);
     try {
-      // If you want to fetch products per category from API (optional)
-      // const filteredProducts = await getCategoryWithProducts(categoryName);
-      // setProducts(filteredProducts);
-
-      // Or just filter client-side:
-      // setProducts(originalProducts.filter(p => p.categoryName === categoryName));
-      // Assuming you keep original products, for demo client-side filtering:
       setLoading(true);
       const allProducts = await getProducts();
       setProducts(allProducts.filter(p => p.categoryName === categoryName));
     } catch (error) {
-      console.error('Error fetching category products:', error);
       setSnackbarMsg('Failed to filter products by category.');
       setSnackbarOpen(true);
     } finally {
@@ -99,47 +130,48 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
     }
   };
 
-  // Handle dialog submit (add/edit product)
   const handleDialogSubmit = async (product) => {
     try {
-      if (product.id) {
-        // Edit existing
-        await updateProduct(product.id, product);
+      if (product.productID || product.id) {
+        await updateProduct(product.productID || product.id, product);
         setSnackbarMsg('Product updated successfully');
       } else {
-        // Add new
         await createProduct(product);
         setSnackbarMsg('Product added successfully');
       }
       setOpenDialog(false);
-      const refreshed = await getProducts();
-      setProducts(refreshed);
+      await refreshProducts();
       setSnackbarOpen(true);
     } catch (error) {
-      console.error('Save product error:', error);
       setSnackbarMsg('Failed to save product');
       setSnackbarOpen(true);
     }
   };
 
-  // Close snackbar
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
+  const refreshProducts = async () => {
+    setLoading(true);
+    try {
+      const refreshed = await getProducts();
+      setProducts(refreshed);
+    } catch {
+      setSnackbarMsg('Failed to refresh products.');
+      setSnackbarOpen(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Filter products based on search and category
+  const handleSnackbarClose = () => setSnackbarOpen(false);
+
   const filteredProducts = products.filter((product) => {
     const searchStr = [product.name, product.categoryName, product.description]
       .filter(Boolean)
       .join(' ')
       .toLowerCase();
-
     const matchesSearch = searchStr.includes(searchTerm.toLowerCase());
-
     const matchesCategory = selectedCategoryName
       ? product.categoryName === selectedCategoryName
       : true;
-
     return matchesSearch && matchesCategory;
   });
 
@@ -164,7 +196,7 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
             sx={{ width: '100%', maxWidth: 350, height: 200, objectFit: 'cover' }}
           />
         </Paper>
-
+        
         {/* Quick Actions */}
         <Paper elevation={3} sx={{ p: 2, width: 400, flexShrink: 0 }}>
           <Typography variant="h5" gutterBottom>
@@ -195,10 +227,10 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
                 </CardContent>
               </Card>
             </Grid>
-
+            
             <Grid item xs={6}>
               <Card
-                onClick={() => navigate('/wallet')}
+                onClick={() => setWalletModalOpen(true)}
                 sx={{
                   height: 140,
                   display: 'flex',
@@ -212,6 +244,7 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
               >
                 <CardContent sx={{ textAlign: 'center' }}>
                   <Typography variant="h6">Wallet</Typography>
+                  <Typography variant="subtitle1">R {walletBalance.toFixed(2)}</Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -235,7 +268,7 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
                 </CardContent>
               </Card>
             </Grid>
-
+            
             <Grid item xs={6}>
               <Card
                 onClick={() => navigate('/profile')}
@@ -256,14 +289,14 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
                 </CardContent>
               </Card>
             </Grid>
-
+            
             <Grid item xs={12}>
               <Button
                 fullWidth
                 variant="contained"
                 color="error"
                 onClick={() => {
-                  localStorage.removeItem('authToken');
+                  localStorage.removeItem('jwtToken');
                   navigate('/login');
                 }}
                 sx={{ height: 50 }}
@@ -292,6 +325,7 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
           onChange={handleSearchChange}
           sx={{ flex: 1, mr: 2 }}
         />
+        
         <Button variant="contained" onClick={handleAddClick}>
           Add Product
         </Button>
@@ -313,24 +347,25 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
       >
         <Button
           variant={!selectedCategoryName ? 'contained' : 'outlined'}
-          onClick={() => {
+          onClick={async () => {
             setSelectedCategoryName(null);
-            // Reload all products
             setLoading(true);
-            getProducts()
-              .then(setProducts)
-              .catch(() => {
-                setSnackbarMsg('Failed to reload products.');
-                setSnackbarOpen(true);
-              })
-              .finally(() => setLoading(false));
+            try {
+              const allProducts = await getProducts();
+              setProducts(allProducts);
+            } catch {
+              setSnackbarMsg('Failed to reload products.');
+              setSnackbarOpen(true);
+            } finally {
+              setLoading(false);
+            }
           }}
         >
           All
         </Button>
-        {categories.map((cat) => (
+        {(categories || []).map((cat) => (
           <Button
-            key={cat.id}
+            key={cat.categoryID || cat.id}
             variant={selectedCategoryName === cat.categoryName ? 'contained' : 'outlined'}
             onClick={() => handleCategoryClick(cat.categoryName)}
           >
@@ -339,41 +374,51 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
         ))}
       </Box>
 
-              {/* Product Grid Section */}
-        <Box sx={{ flex: 1, width: '100%' }}>
-          {loading ? (
+      {/* Product Grid Section */}
+      <Box sx={{ flex: 1, width: '100%' }}>
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
             <CircularProgress />
-          ) : (
-            <Grid container spacing={3}>
-              {filteredProducts.length > 0 ? (
-                filteredProducts.map((product) => (
-                  <Grid item xs={12} sm={6} md={4} lg={3} key={product.id}>
-                    <ProductCard
-                      product={product}
-                      onEdit={() => {
-                        setSelectedProduct(product);
-                        setOpenDialog(true);
-                      }}
-                    />
-                  </Grid>
-                ))
-              ) : (
-                <Typography variant="h6" sx={{ m: 2 }}>
-                  No products match your search.
-                </Typography>
-              )}
-            </Grid>
-          )}
-        </Box>
+            <Typography sx={{ ml: 2 }}>Loading products...</Typography>
+          </Box>
+        ) : products.length === 0 ? (
+          <Alert severity="info" sx={{ m: 2 }}>
+            No products available. Try adding some!
+          </Alert>
+        ) : filteredProducts.length === 0 ? (
+          <Alert severity="warning" sx={{ m: 2 }}>
+            No products match your search criteria.
+          </Alert>
+        ) : (
+          <Grid container spacing={3}>
+            {filteredProducts.map((product) => (
+              <Grid
+                item
+                xs={12}
+                sm={6}
+                md={4}
+                lg={3}
+                key={product.productID || product.id}
+              >
+                <ProductCard
+                  product={product}
+                  categories={categories}
+                  onProductUpdated={refreshProducts}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        )}
+      </Box>
 
       {/* Footer */}
-      <Box sx={{ 
-        py: 2, 
-        textAlign: 'center', 
-        backgroundColor: '#1976d2', 
+      <Box sx={{
+        py: 2,
+        textAlign: 'center',
+        backgroundColor: '#1976d2',
         color: 'white',
         flexShrink: 0,
-        width: '2150px',
+        width: '100%',
         position: 'relative',
       }}>
         <Typography variant="body2">
@@ -381,7 +426,7 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
         </Typography>
       </Box>
 
-      {/* Product Form Dialog */}
+      {/* Modals */}
       {openDialog && (
         <ProductFormDialog
           open={openDialog}
@@ -391,15 +436,25 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
           categories={categories}
         />
       )}
-      
+
+      <WalletModal 
+        open={walletModalOpen}
+        onClose={() => setWalletModalOpen(false)}
+        userId={userId}
+        onBalanceUpdate={(newBalance) => setWalletBalance(newBalance)}
+      />
+
       {/* Snackbar */}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={3500}
-        message={snackbarMsg}
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      />
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbarMsg.includes('Failed') ? 'error' : 'success'}>
+          {snackbarMsg}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
