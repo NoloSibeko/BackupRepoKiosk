@@ -71,40 +71,39 @@ const EditProductFormDialog = ({
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.price || !formData.quantity || !formData.categoryID) {
-      setError('Please fill in all required fields');
-      return;
+  if (!formData.name || !formData.price || !formData.quantity || !formData.categoryID) {
+    setError('Please fill in all required fields');
+    return;
+  }
+
+  setIsSubmitting(true);
+  setError('');
+
+  try {
+    const updatedData = {
+      name: formData.name,
+      description: formData.description,
+      price: parseFloat(formData.price),
+      quantity: parseInt(formData.quantity, 10),
+      categoryID: formData.categoryID,
+    };
+
+    if (formData.imageFile) {
+      updatedData.imageFile = formData.imageFile;
+    } else if (!formData.imageURL) {
+      updatedData.imageURL = '';
     }
 
-    setIsSubmitting(true);
-    setError('');
-
-    try {
-      const updatedData = {
-        name: formData.name,
-        description: formData.description,
-        price: parseFloat(formData.price),
-        quantity: parseInt(formData.quantity, 10),
-        categoryID: formData.categoryID,
-      };
-
-      // If new image was uploaded, include it in the update
-      if (formData.imageFile) {
-        updatedData.imageFile = formData.imageFile;
-      } else if (!formData.imageURL) {
-        updatedData.imageURL = ''; // Handle image removal if needed
-      }
-
-      await updateProduct(product.productID, updatedData);
-      onUpdate();
-      onClose();
-    } catch (err) {
-      console.error('Update failed:', err);
-      setError(err.message || 'Failed to update product. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    await updateProduct(product.productID, updatedData);
+    onUpdate();
+    // Do NOT call onClose() here. Let the user close the dialog.
+  } catch (err) {
+    console.error('Update failed:', err);
+    setError(err.message || 'Failed to update product. Please try again.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>

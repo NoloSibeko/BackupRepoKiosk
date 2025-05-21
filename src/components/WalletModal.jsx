@@ -1,4 +1,3 @@
-// components/WalletModal.js
 import React, { useState, useEffect } from 'react';
 import {
   Modal,
@@ -10,6 +9,7 @@ import {
   Alert
 } from '@mui/material';
 import axios from 'axios';
+import { getCurrentUserId } from '../api/auth';
 
 const style = {
   position: 'absolute',
@@ -20,49 +20,88 @@ const style = {
   bgcolor: 'background.paper',
   boxShadow: 24,
   p: 4,
-  borderRadius: 2
+  borderRadius: 2,
 };
 
-const WalletModal = ({ open, onClose, userId }) => {
+const WalletModal = ({ open, onClose, onBalanceUpdate }) => {
   const [amount, setAmount] = useState('');
   const [balance, setBalance] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const userId = getCurrentUserId();
+
   useEffect(() => {
-    if (open) {
+    if (open && userId) {
       fetchBalance();
     }
-  }, [open]);
+    // eslint-disable-next-line
+  }, [open, userId]);
 
   const fetchBalance = async () => {
     try {
-      const response = await axios.get(`/api/wallet/${userId}/balance`);
-      setBalance(response.data?.balance ?? 0);
-    } catch (err) {
-      console.error(err);
-      setError('Failed to fetch wallet balance');
-      setBalance(0);
+      const token = localStorage.getItem('jwtToken');
+      const response = await axios.get(
+        `https://localhost:7273/api/Wallet/${userId}/Balance`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      setBalance(response.data.balance);
+      if (onBalanceUpdate) {
+        onBalanceUpdate(response.data.balance);
+      }
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+      setError('Failed to fetch wallet balance.');
     }
   };
 
   const handleAddFunds = async () => {
+    if (!userId) {
+      setError('User is not logged in. Please log in again.');
+      return;
+    }
+
     setError('');
     setSuccess('');
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`/api/wallet/${userId}/addFunds`, {
-        amount: parseFloat(amount)
-      });
+      const token = localStorage.getItem('jwtToken');
+      const response = await axios.post(
+        `https://localhost:7273/api/Wallet/${userId}/AddFunds`,
+        {
+          userId: Number(userId),
+          amount: Number(amount),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-      setBalance(response.data?.newBalance ?? 0);
-      setSuccess(`Successfully added $${parseFloat(amount).toFixed(2)} to your wallet!`);
+      setBalance(response.data.newBalance);
+      setSuccess(
+        `Successfully added R${Number(amount).toFixed(2)} to your wallet!`
+      );
       setAmount('');
-      setTimeout(() => onClose(), 1500);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add funds');
+      // Update parent Dashboard's wallet balance in real time
+      if (onBalanceUpdate) {
+        onBalanceUpdate(response.data.newBalance);
+      }
+    } catch (error) {
+      console.error('Error details:', error);
+      setError(
+        error.response?.data?.message ||
+        error.message ||
+        'Failed to add funds'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -72,9 +111,9 @@ const WalletModal = ({ open, onClose, userId }) => {
     <Modal open={open} onClose={onClose}>
       <Box sx={style}>
         <Typography variant="h6" gutterBottom>
-          Wallet Balance: ${typeof balance === 'number' ? balance.toFixed(2) : 'Loading...'}
+          Wallet Balance: R{typeof balance === 'number' ? balance.toFixed(2) : 'Loading...'}
         </Typography>
-        
+
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
@@ -90,8 +129,8 @@ const WalletModal = ({ open, onClose, userId }) => {
         />
 
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-          <Button 
-            onClick={onClose} 
+          <Button
+            onClick={onClose}
             disabled={isLoading}
             variant="outlined"
           >

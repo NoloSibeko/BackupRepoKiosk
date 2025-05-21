@@ -3,24 +3,25 @@ import { Navigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 
 const ProtectedRoute = ({ children, requireSuperuser = false }) => {
-  const token = localStorage.getItem('authToken');
-  
+  const token = localStorage.getItem('jwtToken');
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+
   if (!token) {
     return <Navigate to="/login" replace />;
   }
 
   try {
     const decoded = jwtDecode(token);
+    const isSuperuser = userInfo.Role === 'Superuser' || userInfo.roleID === 2;
     
-    if (requireSuperuser && !decoded.isSuperuser) {
+    if (requireSuperuser && !isSuperuser) {
       return <Navigate to="/dashboard" replace />;
     }
-    
+
     return children;
   } catch (error) {
-    localStorage.removeItem('authToken');
+    localStorage.removeItem('jwtToken');
+    localStorage.removeItem('userInfo');
     return <Navigate to="/login" replace />;
   }
 };
-
-export default ProtectedRoute;

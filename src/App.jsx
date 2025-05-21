@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react'; // Import useState and useEffect
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AuthPage from './pages/AuthPage';
 import Dashboard from './pages/Dashboard';
@@ -8,7 +9,27 @@ import Transactions from './pages/Transactions';
 import Products from './components/Products';
 import Logout from './pages/Logout';
 
+const getUserIdFromToken = () => {
+  const token = localStorage.getItem('jwtToken');
+  if (!token) return null;
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.userId; // Adjust according to your token structure
+  } catch (e) {
+    console.error('Failed to decode token', e);
+    return null;
+  }
+};
+
 function App() {
+  const [userId, setUserId] = useState(null);
+
+  useEffect(() => {
+    const id = getUserIdFromToken(); // Now this function is defined
+    setUserId(id);
+  }, []);
+
   const isAuthenticated = !!localStorage.getItem('authToken'); // Check if the user is logged in
 
   return (

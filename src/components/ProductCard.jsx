@@ -6,13 +6,12 @@ import {
   CardActions,
   Button,
   Typography,
-  Box,
-  Stack
+  Box
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import EditProductFormDialog from './EditProductFormDialog';
 
-const ProductCard = ({ product, updateProductAvailability, categories, onProductUpdated }) => {
+const ProductCard = ({ product, updateProductAvailability, categories, onProductUpdated, onAddToCart }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -80,22 +79,21 @@ const ProductCard = ({ product, updateProductAvailability, categories, onProduct
               >
                 {product.description || 'No description available'}
               </Typography>
-              
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Category:</strong> {product.categoryName || 'Uncategorized'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Quantity:</strong> {product.quantity}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Available:</strong> {product.isAvailable ? 'Yes' : 'No'}
-                </Typography>
-                <Typography variant="body1" color="primary">
-                  <strong>R{product.price ? product.price.toFixed(2) : '0.00'}</strong>
-                </Typography>
-              
+              <Typography variant="body2" color="text.secondary">
+                <strong>Category:</strong> {product.categoryName || 'Uncategorized'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Quantity:</strong> {product.quantity}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Available:</strong> {product.isAvailable ? 'Yes' : 'No'}
+              </Typography>
+              <Typography variant="body1" color="primary">
+                <strong>R{product.price ? product.price.toFixed(2) : '0.00'}</strong>
+              </Typography>
             </CardContent>
           </Card>
+
           {/* Back */}
           <Card
             sx={{
@@ -124,6 +122,12 @@ const ProductCard = ({ product, updateProductAvailability, categories, onProduct
                 onClick={handleToggleAvailability}
               >
                 {product.isAvailable ? 'Mark Unavailable' : 'Mark Available'}
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => onAddToCart(product)} // Call the add to cart function
+              >
+                Add to Cart
               </Button>
               <Button
                 size="small"

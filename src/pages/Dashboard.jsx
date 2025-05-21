@@ -22,6 +22,10 @@ import { getCategories } from '../api/category';
 import { useNavigate } from 'react-router-dom';
 import SingularImage from '../images/SingularSocialSharingImage.png';
 import WalletModal from '../components/WalletModal';
+import { getCurrentUserId } from '../api/auth';
+import CartModal from '../components/CartModal';
+import { getCart, addToCart as apiAddToCart, updateCartItem, removeFromCart, checkoutCart } from '../api/cart';
+
 
 const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
   const [products, setProducts] = useState([]);
@@ -38,60 +42,37 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
   const [walletBalance, setWalletBalance] = useState(0);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [cartModalOpen, setCartModalOpen] = useState(false);
   const navigate = useNavigate();
-  const userRole = localStorage.getItem("userRole"); // 'User' or 'Superuser'
-const isSuperuser = userRole === "Superuser";
-
 
   useEffect(() => {
-    // Get user ID from token or auth context
-    const token = localStorage.getItem('jwtToken');
-    if (token) {
-      // Implement your getUserIdFromToken function or use auth context
-      const id = parseJwt(token).userID; // Example implementation
-      setUserId(id);
-    }
+    const id = getCurrentUserId();
+    setUserId(id);
   }, []);
-
-  // Helper function to parse JWT
-  function parseJwt(token) {
-    try {
-      return JSON.parse(atob(token.split('.')[1]));
-    } catch (e) {
-      return null;
-    }
-  }
 
   const fetchInitialData = async () => {
     try {
       setLoading(true);
-      
-      // First get products and categories
       const [productData, categoryData] = await Promise.all([
         getProducts(),
         getCategories()
       ]);
-      
+
       setProducts(productData);
       setCategories(categoryData);
 
-      // Then try to get wallet balance if user is authenticated
       if (userId) {
-        try {
-          const walletResponse = await axios.get(`/api/Wallet/${userId}/Balance`, {
+        const walletResponse = await axios.get(
+          `https://localhost:7273/api/Wallet/${userId}/Balance`,
+          {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
             }
-          });
-          setWalletBalance(walletResponse.data.balance);
-        } catch (walletError) {
-          console.error("Wallet error:", walletError);
-          setSnackbarMsg('Failed to load wallet balance');
-          setSnackbarOpen(true);
-        }
+          }
+        );
+        setWalletBalance(walletResponse.data.balance);
       }
     } catch (error) {
-      console.error("Initial data error:", error);
       setSnackbarMsg('Failed to fetch initial data. Please try again later.');
       setSnackbarOpen(true);
     } finally {
@@ -101,13 +82,12 @@ const isSuperuser = userRole === "Superuser";
 
   useEffect(() => {
     fetchInitialData();
+    // eslint-disable-next-line
   }, [userId]);
 
-  useEffect(() => {
-    if (parentModalOpen !== modalOpen) {
-      setModalOpen(parentModalOpen);
-    }
-  }, [parentModalOpen]);
+  const handleBalanceUpdate = (newBalance) => {
+    setWalletBalance(newBalance);
+  };
 
   const handleSearchChange = (e) => setSearchTerm(e.target.value);
 
@@ -118,8 +98,8 @@ const isSuperuser = userRole === "Superuser";
 
   const handleCategoryClick = async (categoryName) => {
     setSelectedCategoryName(categoryName);
+    setLoading(true);
     try {
-      setLoading(true);
       const allProducts = await getProducts();
       setProducts(allProducts.filter(p => p.categoryName === categoryName));
     } catch (error) {
@@ -129,6 +109,8 @@ const isSuperuser = userRole === "Superuser";
       setLoading(false);
     }
   };
+
+  
 
   const handleDialogSubmit = async (product) => {
     try {
@@ -175,6 +157,31 @@ const isSuperuser = userRole === "Superuser";
     return matchesSearch && matchesCategory;
   });
 
+const addToCart = async (product) => {
+    try {
+      await apiAddToCart({
+        userID: userId,
+        productID: product.productID || product.id,
+        quantity: 1,
+      });
+
+      // Fetch updated cart and update cartItemsCount
+      const updatedCart = await getCart(userId);
+      // updatedCart.items is the array of cart items
+      const totalCount = (updatedCart.items || []).reduce(
+        (sum, item) => sum + (item.quantity || 1),
+        0
+      );
+      setCartItemsCount(totalCount);
+
+      setSnackbarMsg('Item added to cart!');
+      setSnackbarOpen(true);
+    } catch (error) {
+      setSnackbarMsg('Failed to add item to cart.');
+      setSnackbarOpen(true);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -205,7 +212,7 @@ const isSuperuser = userRole === "Superuser";
           <Grid container spacing={2}>
             <Grid item xs={6}>
               <Card
-                onClick={() => navigate('/cart')}
+                onClick={() => setCartModalOpen(true)} // Open the CartModal
                 sx={{
                   height: 140,
                   display: 'flex',
@@ -244,7 +251,7 @@ const isSuperuser = userRole === "Superuser";
               >
                 <CardContent sx={{ textAlign: 'center' }}>
                   <Typography variant="h6">Wallet</Typography>
-                  <Typography variant="subtitle1">R {walletBalance.toFixed(2)}</Typography>
+                  <Typography variant="subtitle1"> R {typeof walletBalance === 'number' ? walletBalance.toFixed(2) : '0.00'}</Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -402,8 +409,7 @@ const isSuperuser = userRole === "Superuser";
               >
                 <ProductCard
                   product={product}
-                  categories={categories}
-                  onProductUpdated={refreshProducts}
+                  onAddToCart={addToCart} // Pass the addToCart function
                 />
               </Grid>
             ))}
@@ -437,13 +443,21 @@ const isSuperuser = userRole === "Superuser";
         />
       )}
 
+
+
       <WalletModal 
         open={walletModalOpen}
         onClose={() => setWalletModalOpen(false)}
-        userId={userId}
-        onBalanceUpdate={(newBalance) => setWalletBalance(newBalance)}
+        onBalanceUpdate={handleBalanceUpdate}
       />
 
+      <CartModal
+        open={cartModalOpen}
+        onClose={() => setCartModalOpen(false)}
+        userId={userId}
+        onBalanceUpdate={setWalletBalance}
+      />
+      
       {/* Snackbar */}
       <Snackbar
         open={snackbarOpen}
