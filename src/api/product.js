@@ -1,8 +1,6 @@
 import axios from 'axios';
-
 const BASE_URL = 'https://localhost:7273/api/Product';
 
-// Axios instance with Authorization header
 const api = axios.create({
   baseURL: BASE_URL,
   headers: {
@@ -11,8 +9,10 @@ const api = axios.create({
 });
 
 // Add interceptor to include the JWT token in all requests
+// Add JWT token to every request
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('authToken'); // double-check the key
+  const token = localStorage.getItem('jwtToken');
+  console.log('JWT token used for API:', token); 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -35,13 +35,28 @@ export const createProduct = async (formData) => {
 };
 
 // Update a product by ID (not name)
-export const updateProduct = async (productId, formData) => {
-  return await api.put(`/${productId}`, formData, {
+export const updateProduct = async (productId, data) => {
+  const payload = new FormData();
+  payload.append('name', data.name);
+  payload.append('description', data.description || '');
+  payload.append('price', data.price);
+  payload.append('quantity', data.quantity);
+  payload.append('categoryID', data.categoryID);
+
+  if (data.imageFile) {
+    payload.append('image', data.imageFile); 
+  }
+
+  return await api.put(`/${productId}`, payload, {
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'multipart/form-data',
     },
   });
 };
+
+
+
+
 
 // Toggle product availability by ID
 export const toggleProductAvailability = async (productId, isAvailable) => {

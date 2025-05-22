@@ -8,6 +8,8 @@ import Wallet from './pages/Wallet';
 import Transactions from './pages/Transactions';
 import Products from './components/Products';
 import Logout from './pages/Logout';
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
 
 const getUserIdFromToken = () => {
   const token = localStorage.getItem('jwtToken');

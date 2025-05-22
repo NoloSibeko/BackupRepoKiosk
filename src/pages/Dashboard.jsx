@@ -17,6 +17,7 @@ import { ShoppingCart } from '@mui/icons-material';
 import axios from 'axios';
 import ProductCard from '../components/ProductCard';
 import ProductFormDialog from '../components/ProductFormDialog';
+import EditProductFormDialog from '../components/EditProductFormDialog';
 import { getProducts, createProduct, updateProduct } from '../api/product';
 import { getCategories } from '../api/category';
 import { useNavigate } from 'react-router-dom';
@@ -24,8 +25,9 @@ import SingularImage from '../images/SingularSocialSharingImage.png';
 import WalletModal from '../components/WalletModal';
 import { getCurrentUserId } from '../api/auth';
 import CartModal from '../components/CartModal';
-import { getCart, addToCart as apiAddToCart, updateCartItem, removeFromCart, checkoutCart } from '../api/cart';
-
+import { getCart, addToCart as apiAddToCart } from '../api/cart';
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
 
 const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
   const [products, setProducts] = useState([]);
@@ -36,13 +38,13 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [snackbarMsg, setSnackbarMsg] = useState('');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
   const [selectedCategoryName, setSelectedCategoryName] = useState(null);
   const [cartItemsCount, setCartItemsCount] = useState(0);
   const [walletBalance, setWalletBalance] = useState(0);
   const [walletModalOpen, setWalletModalOpen] = useState(false);
   const [userId, setUserId] = useState(null);
   const [cartModalOpen, setCartModalOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -72,6 +74,16 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
         );
         setWalletBalance(walletResponse.data.balance);
       }
+
+      // Fetch cart count
+      if (userId) {
+        const updatedCart = await getCart(userId);
+        const totalCount = (updatedCart.items || []).reduce(
+          (sum, item) => sum + (item.quantity || 1),
+          0
+        );
+        setCartItemsCount(totalCount);
+      }
     } catch (error) {
       setSnackbarMsg('Failed to fetch initial data. Please try again later.');
       setSnackbarOpen(true);
@@ -91,10 +103,15 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
 
   const handleSearchChange = (e) => setSearchTerm(e.target.value);
 
+  
+
   const handleAddClick = () => {
     setSelectedProduct(null);
     setOpenDialog(true);
   };
+
+
+  
 
   const handleCategoryClick = async (categoryName) => {
     setSelectedCategoryName(categoryName);
@@ -110,25 +127,25 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
     }
   };
 
-  
-
-  const handleDialogSubmit = async (product) => {
-    try {
-      if (product.productID || product.id) {
-        await updateProduct(product.productID || product.id, product);
-        setSnackbarMsg('Product updated successfully');
-      } else {
-        await createProduct(product);
-        setSnackbarMsg('Product added successfully');
-      }
-      setOpenDialog(false);
-      await refreshProducts();
-      setSnackbarOpen(true);
-    } catch (error) {
-      setSnackbarMsg('Failed to save product');
-      setSnackbarOpen(true);
+const handleDialogSubmit = async (product) => {
+  try {
+    if (product.productID || product.id) {
+      await updateProduct(product.productID || product.id, product);
+      setSnackbarMsg('Product updated successfully');
+    } else {
+      await createProduct(product);
+      setSnackbarMsg('Product added successfully');
     }
-  };
+    setOpenDialog(false);
+    setEditOpen(false); // <-- close edit dialog if open
+    await refreshProducts();
+    await refreshCartCount(); // <-- refresh cart count in case product affects cart
+    setSnackbarOpen(true);
+  } catch (error) {
+    setSnackbarMsg('Failed to save product');
+    setSnackbarOpen(true);
+  }
+};
 
   const refreshProducts = async () => {
     setLoading(true);
@@ -142,6 +159,18 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
       setLoading(false);
     }
   };
+
+ const updateProductInState = (updatedProduct) => {
+  setProducts((prevProducts) =>
+    prevProducts.map((p) =>
+      String(p.productID || p.id) === String(updatedProduct.productID || updatedProduct.id)
+        ? { ...p, ...updatedProduct }
+        : p
+    )
+  );
+};
+
+
 
   const handleSnackbarClose = () => setSnackbarOpen(false);
 
@@ -157,7 +186,7 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
     return matchesSearch && matchesCategory;
   });
 
-const addToCart = async (product) => {
+  const addToCart = async (product) => {
     try {
       await apiAddToCart({
         userID: userId,
@@ -165,9 +194,10 @@ const addToCart = async (product) => {
         quantity: 1,
       });
 
+      await refreshCartCount(); 
+
       // Fetch updated cart and update cartItemsCount
       const updatedCart = await getCart(userId);
-      // updatedCart.items is the array of cart items
       const totalCount = (updatedCart.items || []).reduce(
         (sum, item) => sum + (item.quantity || 1),
         0
@@ -180,6 +210,16 @@ const addToCart = async (product) => {
       setSnackbarMsg('Failed to add item to cart.');
       setSnackbarOpen(true);
     }
+  };
+
+  const handleEditProduct = (product) => {
+    setSelectedProduct(product);
+    setEditOpen(true);
+  };
+
+  const handleClose = () => {
+    setEditOpen(false);
+    setSelectedProduct(null);
   };
 
   return (
@@ -195,7 +235,7 @@ const addToCart = async (product) => {
     >
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, gap: 3 }}>
-        <Paper elevation={3} sx={{ p: 2, flex: 1 }}>
+        <Paper elevation={3} sx={{ p: 2, width: 350, flexShrink: 0, height: 250 }}>
           <Box
             component="img"
             src={SingularImage}
@@ -203,16 +243,20 @@ const addToCart = async (product) => {
             sx={{ width: '100%', maxWidth: 350, height: 200, objectFit: 'cover' }}
           />
         </Paper>
+
+        <Paper elevation={3} sx={{ p: 2, flex: 1 }}>
+          
+        </Paper>
         
         {/* Quick Actions */}
-        <Paper elevation={3} sx={{ p: 2, width: 400, flexShrink: 0 }}>
+        <Paper elevation={3} sx={{ p: 2, width: 400, flexShrink: 0, height: 250 }}>
           <Typography variant="h5" gutterBottom>
             Quick Actions
           </Typography>
           <Grid container spacing={2}>
             <Grid item xs={6}>
               <Card
-                onClick={() => setCartModalOpen(true)} // Open the CartModal
+                onClick={() => setCartModalOpen(true)}
                 sx={{
                   height: 140,
                   display: 'flex',
@@ -280,7 +324,7 @@ const addToCart = async (product) => {
               <Card
                 onClick={() => navigate('/profile')}
                 sx={{
-                  height: 140,
+                  height: 50,
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'center',
@@ -315,6 +359,18 @@ const addToCart = async (product) => {
         </Paper>
       </Box>
 
+ <Paper 
+        elevation={3} 
+        sx={{ 
+          flex: 1, 
+          width: '100%',
+          maxWidth: 2285, 
+          p: 3, 
+          mb: 3,
+          backgroundColor: 'background.paper',
+          borderRadius: 2
+        }}
+      >
       {/* Search and Add Product */}
       <Box
         sx={{
@@ -409,13 +465,16 @@ const addToCart = async (product) => {
               >
                 <ProductCard
                   product={product}
-                  onAddToCart={addToCart} // Pass the addToCart function
+                  onAddToCart={addToCart}
+                  onEdit={handleEditProduct}
+                  
                 />
               </Grid>
             ))}
           </Grid>
         )}
       </Box>
+      </Paper>
 
       {/* Footer */}
       <Box sx={{
@@ -443,8 +502,19 @@ const addToCart = async (product) => {
         />
       )}
 
-
-
+<EditProductFormDialog
+  open={editOpen}
+  onClose={handleClose}
+  product={selectedProduct}
+  categories={categories}
+  onUpdate={async (updatedProduct) => {
+    updateProductInState(updatedProduct); // instant UI update
+    await refreshProducts();               // background sync with backend
+    refreshCartCount();
+    setEditOpen(false);
+    setSelectedProduct(null);
+  }}
+/>
       <WalletModal 
         open={walletModalOpen}
         onClose={() => setWalletModalOpen(false)}
