@@ -13,22 +13,29 @@ import {
   Typography,
   Alert,
   CircularProgress,
+  Avatar,
+  Box,
+  IconButton
 } from '@mui/material';
+import { Add, Remove, Delete, ShoppingCart } from '@mui/icons-material';
 import { getCart, removeFromCart, updateCartItem, checkoutCart } from '../api/cart';
 
 const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
   const [cartItems, setCartItems] = useState([]);
-  const [cartTotal, setCartTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Fetch cart items when modal opens
+// Calculate total whenever cartItems changes
+  const cartTotal = cartItems.reduce((total, item) => {
+    return total + (item.price * item.quantity);
+  }, 0);
+
+
   useEffect(() => {
     if (open && userId) {
       fetchCart();
     }
-    // eslint-disable-next-line
   }, [open, userId]);
 
   const fetchCart = async () => {
@@ -39,7 +46,7 @@ const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
       setCartItems(cart.items || []);
       setCartTotal(cart.totalAmount || 0);
     } catch (err) {
-      setError('Failed to fetch cart items.');
+      
     } finally {
       setLoading(false);
     }
@@ -58,13 +65,20 @@ const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
     }
   };
 
-  const handleQuantityChange = async (cartItemID, newQty) => {
+const handleQuantityChange = async (cartItemID, newQty) => {
     if (newQty < 1) return;
     setLoading(true);
     setError('');
     try {
       await updateCartItem(cartItemID, { quantity: newQty });
-      await fetchCart();
+      // Update local state immediately for better UX
+      setCartItems(prevItems => 
+        prevItems.map(item => 
+          item.cartItemID === cartItemID 
+            ? { ...item, quantity: newQty, subtotal: item.price * newQty } 
+            : item
+        )
+      );
     } catch (err) {
       setError('Failed to update quantity.');
     } finally {
@@ -80,9 +94,9 @@ const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
       await checkoutCart(userId);
       setSuccess('Checkout successful!');
       await fetchCart();
-      if (onBalanceUpdate) onBalanceUpdate(); // Optionally refresh wallet
+      if (onBalanceUpdate) onBalanceUpdate();
     } catch (err) {
-      setError('Checkout failed.');
+      setError(err.response?.data?.message || 'Checkout failed.');
     } finally {
       setLoading(false);
     }
@@ -90,15 +104,23 @@ const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>Your Cart</DialogTitle>
+      <DialogTitle>
+        <Box display="flex" alignItems="center">
+          <ShoppingCart sx={{ mr: 1 }} />
+          Your Shopping Cart
+        </Box>
+      </DialogTitle>
       <DialogContent>
-        {loading && (
-          <CircularProgress sx={{ display: 'block', mx: 'auto', my: 2 }} />
-        )}
+        {loading && <CircularProgress sx={{ display: 'block', mx: 'auto', my: 2 }} />}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+
         {(!cartItems || cartItems.length === 0) && !loading ? (
-          <Typography sx={{ mt: 2 }}>Your cart is empty.</Typography>
+          <Box textAlign="center" py={4}>
+            <Typography variant="h6" color="textSecondary">
+              Your cart is empty
+            </Typography>
+          </Box>
         ) : (
           <Table>
             <TableHead>
@@ -112,32 +134,49 @@ const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
             </TableHead>
             <TableBody>
               {cartItems.map((item) => (
-                <TableRow key={item.cartItemID}>
-                  <TableCell>{item.productName}</TableCell>
+                <TableRow key={item.cartItemID} hover>
+                  <TableCell>
+                    <Box display="flex" alignItems="center">
+                      <Avatar
+                        src={item.imageURL}
+                        alt={item.productName}
+                        sx={{ width: 56, height: 56, mr: 2 }}
+                        variant="rounded"
+                      />
+                      <Typography variant="body1">
+                        {item.productName}
+                      </Typography>
+                    </Box>
+                  </TableCell>
                   <TableCell>R{item.price.toFixed(2)}</TableCell>
                   <TableCell>
-                    <Button
-                      size="small"
-                      onClick={() => handleQuantityChange(item.cartItemID, item.quantity - 1)}
-                      disabled={item.quantity <= 1 || loading}
-                    >-</Button>
-                    {item.quantity}
-                    <Button
-                      size="small"
-                      onClick={() => handleQuantityChange(item.cartItemID, item.quantity + 1)}
-                      disabled={loading}
-                    >+</Button>
+                    <Box display="flex" alignItems="center">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleQuantityChange(item.cartItemID, item.quantity - 1)}
+                        disabled={item.quantity <= 1 || loading}
+                      >
+                        <Remove fontSize="small" />
+                      </IconButton>
+                      <Typography sx={{ mx: 1 }}>{item.quantity}</Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleQuantityChange(item.cartItemID, item.quantity + 1)}
+                        disabled={loading}
+                      >
+                        <Add fontSize="small" />
+                      </IconButton>
+                    </Box>
                   </TableCell>
                   <TableCell>R{item.subtotal.toFixed(2)}</TableCell>
                   <TableCell align="right">
-                    <Button
+                    <IconButton
                       color="error"
-                      size="small"
                       onClick={() => handleRemove(item.cartItemID)}
                       disabled={loading}
                     >
-                      Remove
-                    </Button>
+                      <Delete />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
@@ -154,15 +193,22 @@ const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
           </Table>
         )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={loading}>Close</Button>
+      <DialogActions sx={{ p: 3 }}>
+        <Button 
+          onClick={onClose} 
+          disabled={loading}
+          sx={{ mr: 2 }}
+        >
+          Continue Shopping
+        </Button>
         <Button
           onClick={handleCheckout}
           variant="contained"
           color="primary"
           disabled={loading || !cartItems.length}
+          size="large"
         >
-          Checkout
+          Proceed to Checkout
         </Button>
       </DialogActions>
     </Dialog>

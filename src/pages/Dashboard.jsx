@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -11,9 +11,10 @@ import {
   Card,
   CardContent,
   Button,
-  Alert
+  Alert,
+  IconButton
 } from '@mui/material';
-import { ShoppingCart } from '@mui/icons-material';
+import { ShoppingCart, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import axios from 'axios';
 import ProductCard from '../components/ProductCard';
 import ProductFormDialog from '../components/ProductFormDialog';
@@ -26,8 +27,6 @@ import WalletModal from '../components/WalletModal';
 import { getCurrentUserId } from '../api/auth';
 import CartModal from '../components/CartModal';
 import { getCart, addToCart as apiAddToCart } from '../api/cart';
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
 
 const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
   const [products, setProducts] = useState([]);
@@ -46,6 +45,11 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const navigate = useNavigate();
+  const productGridRef = useRef(null);
+
+  const cardWidth = 300;
+  const cardsPerPage = 7;
+  const gap = 16;
 
   useEffect(() => {
     const id = getCurrentUserId();
@@ -92,6 +96,7 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
     }
   };
 
+  
   useEffect(() => {
     fetchInitialData();
     // eslint-disable-next-line
@@ -110,7 +115,15 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
     setOpenDialog(true);
   };
 
-
+  const scrollProducts = (direction) => {
+    if (productGridRef.current) {
+      const scrollAmount = direction === 'left' ? -((cardWidth + gap) * cardsPerPage) : ((cardWidth + gap) * cardsPerPage);
+      productGridRef.current.scrollBy({
+        left: scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
   
 
   const handleCategoryClick = async (categoryName) => {
@@ -360,120 +373,147 @@ const handleDialogSubmit = async (product) => {
       </Box>
 
  <Paper 
-        elevation={3} 
-        sx={{ 
-          flex: 1, 
-          width: '100%',
-          maxWidth: 2285, 
-          p: 3, 
-          mb: 3,
-          backgroundColor: 'background.paper',
-          borderRadius: 2
-        }}
+  elevation={3} 
+  sx={{ 
+    flex: 1, 
+    width: '100%',
+    maxWidth: 2285, 
+    p: 3, 
+    mb: 3,
+    backgroundColor: 'background.paper',
+    borderRadius: 2,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center', // This centers child elements horizontally
+  }}
+>
+  {/* Search and Add Product - Now centered */}
+  <Box
+    sx={{
+      display: 'flex',
+      justifyContent: 'center', // Center the content
+      mb: 3,
+      width: '100%',
+      maxWidth: 900, // Keep a reasonable max width
+    }}
+  >
+    <Box sx={{ 
+      display: 'flex', 
+      width: '100%',
+      maxWidth: 900,
+      gap: 2
+    }}>
+      <TextField
+        variant="outlined"
+        label="Search products..."
+        value={searchTerm}
+        onChange={handleSearchChange}
+        sx={{ flex: 1,  borderRadius: '20px', '& .MuiOutlinedInput-root': { borderRadius: '20px' } } }
+      />
+      
+      <Button 
+        variant="contained" 
+        onClick={handleAddClick}
+        sx={{ width: 150, borderRadius: '12px', paddingX: 2, paddingY: 1 }} // Give the button a fixed width
       >
-      {/* Search and Add Product */}
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          mb: 3,
-          maxWidth: 900,
-          width: '100%',
-        }}
-      >
-        <TextField
-          variant="outlined"
-          label="Search products..."
-          value={searchTerm}
-          onChange={handleSearchChange}
-          sx={{ flex: 1, mr: 2 }}
-        />
-        
-        <Button variant="contained" onClick={handleAddClick}>
-          Add Product
-        </Button>
-      </Box>
+        Add Product
+      </Button>
+    </Box>
+  </Box>
 
-      {/* Categories */}
-      <Box
-        sx={{
-          display: 'flex',
-          gap: 2,
-          overflowX: 'auto',
-          maxWidth: 900,
-          mb: 4,
-          px: 1,
-          py: 1,
-          bgcolor: '#eee',
-          borderRadius: 1,
+  {/* Categories - Now centered */}
+  <Box
+    sx={{
+      display: 'flex',
+      justifyContent: 'center',
+      width: '100%',
+      mb: 4,
+    }}
+  >
+    <Box
+      sx={{
+        display: 'flex',
+        gap: 2,
+        overflowX: 'auto',
+        maxWidth: 900,
+        px: 1,
+        py: 1,
+        bgcolor: '#eee',
+        borderRadius: 1,
+      }}
+    >
+      <Button
+        variant={!selectedCategoryName ? 'contained' : 'outlined'}
+        onClick={async () => {
+          setSelectedCategoryName(null);
+          setLoading(true);
+          try {
+            const allProducts = await getProducts();
+            setProducts(allProducts);
+          } catch {
+            setSnackbarMsg('Failed to reload products.');
+            setSnackbarOpen(true);
+          } finally {
+            setLoading(false);
+          }
         }}
       >
+        All
+      </Button>
+      {(categories || []).map((cat) => (
         <Button
-          variant={!selectedCategoryName ? 'contained' : 'outlined'}
-          onClick={async () => {
-            setSelectedCategoryName(null);
-            setLoading(true);
-            try {
-              const allProducts = await getProducts();
-              setProducts(allProducts);
-            } catch {
-              setSnackbarMsg('Failed to reload products.');
-              setSnackbarOpen(true);
-            } finally {
-              setLoading(false);
-            }
-          }}
+          key={cat.categoryID || cat.id}
+          variant={selectedCategoryName === cat.categoryName ? 'contained' : 'outlined'}
+          onClick={() => handleCategoryClick(cat.categoryName)}
+            
         >
-          All
+          {cat.categoryName}
         </Button>
-        {(categories || []).map((cat) => (
-          <Button
-            key={cat.categoryID || cat.id}
-            variant={selectedCategoryName === cat.categoryName ? 'contained' : 'outlined'}
-            onClick={() => handleCategoryClick(cat.categoryName)}
-          >
-            {cat.categoryName}
-          </Button>
-        ))}
-      </Box>
+      ))}
+    </Box>
+  </Box>
 
-      {/* Product Grid Section */}
-      <Box sx={{ flex: 1, width: '100%' }}>
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-            <CircularProgress />
-            <Typography sx={{ ml: 2 }}>Loading products...</Typography>
-          </Box>
-        ) : products.length === 0 ? (
-          <Alert severity="info" sx={{ m: 2 }}>
-            No products available. Try adding some!
-          </Alert>
-        ) : filteredProducts.length === 0 ? (
-          <Alert severity="warning" sx={{ m: 2 }}>
-            No products match your search criteria.
-          </Alert>
-        ) : (
-          <Grid container spacing={3}>
+
+     {/* Product Grid with Pagination */}
+        <Box sx={{ position: 'relative', width: '100%' }}>
+          <IconButton
+            onClick={() => scrollProducts('left')}
+            sx={{ position: 'absolute', left: 0, top: '50%', zIndex: 1, backgroundColor: 'rgba(255,255,255,0.8)' }}
+          >
+            <ChevronLeft fontSize="large" />
+          </IconButton>
+
+          <Box
+            ref={productGridRef}
+            sx={{
+              display: 'flex',
+              gap: `${gap}px`,
+              overflowX: 'auto',
+              scrollBehavior: 'smooth',
+              scrollbarWidth: 'none',
+              '&::-webkit-scrollbar': { display: 'none' },
+              p: 2,
+              mx: 4
+            }}
+          >
             {filteredProducts.map((product) => (
-              <Grid
-                item
-                xs={12}
-                sm={6}
-                md={4}
-                lg={3}
-                key={product.productID || product.id}
-              >
+              <Box key={product.productID || product.id} sx={{ minWidth: cardWidth, flexShrink: 0 }}>
                 <ProductCard
                   product={product}
-                  onAddToCart={addToCart}
+                  onAddToCart={() => addToCart(product)}
                   onEdit={handleEditProduct}
-                  
                 />
-              </Grid>
+              </Box>
             ))}
-          </Grid>
-        )}
-      </Box>
+          </Box>
+
+          <IconButton
+            onClick={() => scrollProducts('right')}
+            sx={{ position: 'absolute', right: 0, top: '50%', zIndex: 1, backgroundColor: 'rgba(255,255,255,0.8)' }}
+          >
+            <ChevronRight fontSize="large" />
+          </IconButton>
+        </Box>
       </Paper>
 
       {/* Footer */}

@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import EditProductFormDialog from './EditProductFormDialog';
-
+import { toggleProductAvailability } from '../api/product'; 
 
 const ProductCard = ({
   product,
@@ -24,6 +24,7 @@ const ProductCard = ({
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [availability, setAvailability] = useState(product.isAvailable);
 
   const handleFlip = () => setIsFlipped(!isFlipped);
 
@@ -35,28 +36,23 @@ const ProductCard = ({
   const handleEditClose = () => setEditOpen(false);
 
   // Toggle handler for the Switch
-  const handleSwitchChange = (e) => {
-    e.stopPropagation();
-    const newValue = e.target.checked;
-    console.log(
-      `[ProductCard] Switch toggled for product ${product.productID || product.id}. New isAvailable: ${newValue}`
-    );
-    if (onToggleAvailability) {
-      onToggleAvailability({ ...product, isAvailable: newValue });
-    } else {
-      console.warn('[ProductCard] No onToggleAvailability handler provided!');
-    }
-  };
+const handleSwitchChange = async (e) => {
+  e.stopPropagation();
+  const newValue = e.target.checked;
 
-  const handleToggleAvailability = async (updatedProduct) => {
   try {
-    await toggleProductAvailability(updatedProduct.productID, updatedProduct.isAvailable);
-    console.log(`Availability updated for ${updatedProduct.name}`);
-    fetchProducts(); // refresh product list if needed
-  } catch (err) {
-    console.error('Error updating product availability:', err);
+    await toggleProductAvailability(product.productID || product.id, newValue);
+    setAvailability(newValue); // update UI state
+    console.log(`Availability updated to ${newValue ? 'Available' : 'Unavailable'} for product ${product.name}`);
+    if (onProductUpdated) onProductUpdated();
+  } catch (error) {
+    console.error('Failed to toggle availability:', error);
   }
 };
+  
+
+
+ 
 
 
   return (
@@ -82,7 +78,7 @@ const ProductCard = ({
             }}
           >
 
-             {/* Optional: Badge at bottom right only if unavailable */}
+             {/* Badge at bottom right only if unavailable */}
             {!product.isAvailable && (
               <Box
                 sx={{
@@ -97,7 +93,7 @@ const ProductCard = ({
                   zIndex: 2,
                 }}
               >
-                Out of Stock
+                Unavailable
               </Box>
             )}
             <CardMedia
@@ -152,8 +148,16 @@ const ProductCard = ({
             }}
           >
             <CardContent>
-              <Typography variant="subtitle1">Price: R{product.price}</Typography>
-              <Typography variant="subtitle2">Qty: {product.quantity}</Typography>
+               <Typography variant="h6" gutterBottom>
+            {product.name}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            <strong>Category:</strong> {product.categoryName || 'Uncategorized'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            <strong>Description:</strong> {product.description || 'No description available'}
+          </Typography>
+
               <Typography variant="body2" color="text.secondary">
                 {product.description}
               </Typography>

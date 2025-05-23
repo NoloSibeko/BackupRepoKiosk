@@ -56,13 +56,16 @@ export const updateProduct = async (productId, data) => {
 
 
 
-
-
 // Toggle product availability by ID
 export const toggleProductAvailability = async (productId, isAvailable) => {
-  const response = await api.put(`/${productId}/availability`, { isAvailable });
+  const response = await api.put(`/mark-available/${productId}`, isAvailable, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
   return response.data;
 };
+
 
 // Delete a product by ID
 export const deleteProduct = async (productId) => {
