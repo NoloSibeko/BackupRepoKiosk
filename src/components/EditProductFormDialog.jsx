@@ -34,6 +34,7 @@ const EditProductFormDialog = ({
   const [categories, setCategories] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     if (product) {
@@ -47,6 +48,7 @@ const EditProductFormDialog = ({
         imageFile: null,
       });
       setError('');
+      setFieldErrors({});
     }
   }, [product, open]);
 
@@ -65,6 +67,7 @@ const EditProductFormDialog = ({
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    setFieldErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
   const handleImageChange = (e) => {
@@ -83,19 +86,26 @@ const EditProductFormDialog = ({
     }
   };
 
+  const validate = () => {
+    const errors = {};
+    if (!formData.name.trim()) errors.name = 'Name is required.';
+    if (!formData.price.trim()) errors.price = 'Price is required.';
+    if (!formData.quantity.trim()) errors.quantity = 'Quantity is required.';
+    if (!formData.categoryID) errors.categoryID = 'Category is required.';
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async () => {
-    if (!formData.name || !formData.price || !formData.quantity || !formData.categoryID) {
-      setError('Please fill in all required fields.');
-      return;
-    }
+    if (!validate()) return;
 
     setIsSubmitting(true);
     setError('');
 
     try {
       const updatedProduct = {
-        name: formData.name,
-        description: formData.description,
+        name: formData.name.trim(),
+        description: formData.description.trim(),
         price: parseFloat(formData.price),
         quantity: parseInt(formData.quantity, 10),
         categoryID: parseInt(formData.categoryID, 10),
@@ -104,13 +114,11 @@ const EditProductFormDialog = ({
 
       await updateProduct(product.productID, updatedProduct);
 
-      // Fetch the latest product from backend
       const allProducts = await getProducts();
       const latest = allProducts.find(
         (p) => String(p.productID) === String(product.productID)
       );
 
-      // Pass the latest product to Dashboard for instant UI update
       onUpdate(
         latest || {
           ...product,
@@ -148,20 +156,23 @@ const EditProductFormDialog = ({
             name="name"
             value={formData.name}
             onChange={handleChange}
+            error={!!fieldErrors.name}
+            helperText={fieldErrors.name}
             fullWidth
             margin="normal"
           />
 
           <TextField
-            label="Description"
-            name="description"
-            multiline
-            minRows={2}
-            value={formData.description}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-          />
+  required
+  fullWidth
+  label="Description"
+  name="description"
+  value={formData.description}
+  onChange={handleChange}
+  error={!!fieldErrors.description}
+  helperText={fieldErrors.description}
+/>
+
 
           <TextField
             label="Price (ZAR) *"
@@ -170,6 +181,8 @@ const EditProductFormDialog = ({
             inputProps={{ step: '0.01', min: '0' }}
             value={formData.price}
             onChange={handleChange}
+            error={!!fieldErrors.price}
+            helperText={fieldErrors.price}
             fullWidth
             margin="normal"
           />
@@ -181,6 +194,8 @@ const EditProductFormDialog = ({
             inputProps={{ min: '0' }}
             value={formData.quantity}
             onChange={handleChange}
+            error={!!fieldErrors.quantity}
+            helperText={fieldErrors.quantity}
             fullWidth
             margin="normal"
           />
@@ -191,6 +206,8 @@ const EditProductFormDialog = ({
             name="categoryID"
             value={formData.categoryID}
             onChange={handleChange}
+            error={!!fieldErrors.categoryID}
+            helperText={fieldErrors.categoryID}
             fullWidth
             margin="normal"
           >

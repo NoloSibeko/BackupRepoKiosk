@@ -26,11 +26,9 @@ const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-// Calculate total whenever cartItems changes
   const cartTotal = cartItems.reduce((total, item) => {
     return total + (item.price * item.quantity);
   }, 0);
-
 
   useEffect(() => {
     if (open && userId) {
@@ -44,9 +42,8 @@ const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
     try {
       const cart = await getCart(userId);
       setCartItems(cart.items || []);
-      setCartTotal(cart.totalAmount || 0);
     } catch (err) {
-      
+      setError('Failed to load cart items.');
     } finally {
       setLoading(false);
     }
@@ -65,13 +62,12 @@ const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
     }
   };
 
-const handleQuantityChange = async (cartItemID, newQty) => {
+  const handleQuantityChange = async (cartItemID, newQty) => {
     if (newQty < 1) return;
     setLoading(true);
     setError('');
     try {
       await updateCartItem(cartItemID, { quantity: newQty });
-      // Update local state immediately for better UX
       setCartItems(prevItems => 
         prevItems.map(item => 
           item.cartItemID === cartItemID 
@@ -138,7 +134,7 @@ const handleQuantityChange = async (cartItemID, newQty) => {
                   <TableCell>
                     <Box display="flex" alignItems="center">
                       <Avatar
-                        src={item.imageURL}
+                        src={item.imageURL || '/path/to/default/image.jpg'} // Use a default image if not available
                         alt={item.productName}
                         sx={{ width: 56, height: 56, mr: 2 }}
                         variant="rounded"

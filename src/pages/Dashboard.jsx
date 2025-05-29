@@ -4,7 +4,6 @@ import {
   Typography,
   Paper,
   Grid,
-  CircularProgress,
   TextField,
   Snackbar,
   Badge,
@@ -12,7 +11,7 @@ import {
   CardContent,
   Button,
   Alert,
-  IconButton
+  IconButton, 
 } from '@mui/material';
 import { ShoppingCart, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import axios from 'axios';
@@ -24,9 +23,35 @@ import { getCategories } from '../api/category';
 import { useNavigate } from 'react-router-dom';
 import SingularImage from '../images/SingularSocialSharingImage.png';
 import WalletModal from '../components/WalletModal';
-import { getCurrentUserId } from '../api/auth';
+import { getCurrentUserId, getCurrentUserRole } from '../api/auth';
 import CartModal from '../components/CartModal';
 import { getCart, addToCart as apiAddToCart } from '../api/cart';
+import TransactionModal from '../components/TransactionModal';
+import ProfileModal from '../components/ProfileModal';
+import Slider from 'react-slick';
+
+// Image imports
+import SS1 from '../images/SS1.png';
+import SS2 from '../images/SS2.jpg';
+import SS3 from '../images/SS3.jpg';
+import BackgroundImage from '../images/Background.jpg';
+
+// Slider configuration
+const settings = {
+  dots: true,
+  infinite: true,
+  speed: 500,
+  slidesToShow: 1,
+  slidesToScroll: 1,
+  autoplay: true,
+  autoplaySpeed: 3000,
+};
+
+const images = [
+  SS1,
+  SS2,
+  SS3
+];
 
 const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
   const [products, setProducts] = useState([]);
@@ -46,10 +71,13 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
   const [editOpen, setEditOpen] = useState(false);
   const navigate = useNavigate();
   const productGridRef = useRef(null);
-
+  const [transactionModalOpen, setTransactionModalOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const cardWidth = 300;
   const cardsPerPage = 7;
   const gap = 16;
+
+  const userRole = getCurrentUserRole();
 
   useEffect(() => {
     const id = getCurrentUserId();
@@ -79,7 +107,6 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
         setWalletBalance(walletResponse.data.balance);
       }
 
-      // Fetch cart count
       if (userId) {
         const updatedCart = await getCart(userId);
         const totalCount = (updatedCart.items || []).reduce(
@@ -96,10 +123,8 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
     }
   };
 
-  
   useEffect(() => {
     fetchInitialData();
-    // eslint-disable-next-line
   }, [userId]);
 
   const handleBalanceUpdate = (newBalance) => {
@@ -107,8 +132,6 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
   };
 
   const handleSearchChange = (e) => setSearchTerm(e.target.value);
-
-  
 
   const handleAddClick = () => {
     setSelectedProduct(null);
@@ -124,7 +147,6 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
       });
     }
   };
-  
 
   const handleCategoryClick = async (categoryName) => {
     setSelectedCategoryName(categoryName);
@@ -140,25 +162,25 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
     }
   };
 
-const handleDialogSubmit = async (product) => {
-  try {
-    if (product.productID || product.id) {
-      await updateProduct(product.productID || product.id, product);
-      setSnackbarMsg('Product updated successfully');
-    } else {
-      await createProduct(product);
-      setSnackbarMsg('Product added successfully');
+  const handleDialogSubmit = async (product) => {
+    try {
+      if (product.productID || product.id) {
+        await updateProduct(product.productID || product.id, product);
+        setSnackbarMsg('Product updated successfully');
+      } else {
+        await createProduct(product);
+        setSnackbarMsg('Product added successfully');
+      }
+      setOpenDialog(false);
+      setEditOpen(false);
+      await refreshProducts();
+      await refreshCartCount();
+      setSnackbarOpen(true);
+    } catch (error) {
+      setSnackbarMsg('Failed to save product');
+      setSnackbarOpen(true);
     }
-    setOpenDialog(false);
-    setEditOpen(false); // <-- close edit dialog if open
-    await refreshProducts();
-    await refreshCartCount(); // <-- refresh cart count in case product affects cart
-    setSnackbarOpen(true);
-  } catch (error) {
-    setSnackbarMsg('Failed to save product');
-    setSnackbarOpen(true);
-  }
-};
+  };
 
   const refreshProducts = async () => {
     setLoading(true);
@@ -173,17 +195,15 @@ const handleDialogSubmit = async (product) => {
     }
   };
 
- const updateProductInState = (updatedProduct) => {
-  setProducts((prevProducts) =>
-    prevProducts.map((p) =>
-      String(p.productID || p.id) === String(updatedProduct.productID || updatedProduct.id)
-        ? { ...p, ...updatedProduct }
-        : p
-    )
-  );
-};
-
-
+  const updateProductInState = (updatedProduct) => {
+    setProducts((prevProducts) =>
+      prevProducts.map((p) =>
+        String(p.productID || p.id) === String(updatedProduct.productID || updatedProduct.id)
+          ? { ...p, ...updatedProduct }
+          : p
+      )
+    );
+  };
 
   const handleSnackbarClose = () => setSnackbarOpen(false);
 
@@ -207,9 +227,8 @@ const handleDialogSubmit = async (product) => {
         quantity: 1,
       });
 
-      await refreshCartCount(); 
+      await refreshCartCount();
 
-      // Fetch updated cart and update cartItemsCount
       const updatedCart = await getCart(userId);
       const totalCount = (updatedCart.items || []).reduce(
         (sum, item) => sum + (item.quantity || 1),
@@ -235,34 +254,69 @@ const handleDialogSubmit = async (product) => {
     setSelectedProduct(null);
   };
 
+  const refreshCartCount = async () => {
+    if (userId) {
+      try {
+        const updatedCart = await getCart(userId);
+        const totalCount = (updatedCart.items || []).reduce(
+          (sum, item) => sum + (item.quantity || 1),
+          0
+        );
+        setCartItemsCount(totalCount);
+      } catch (error) {
+        console.error('Failed to refresh cart count:', error);
+      }
+    }
+  };
+
   return (
     <Box
       sx={{
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#948276', // Light cream background
+         // Use the imported background image
+        backgroundSize: 'cover',
+        backgroundRepeat: 'repeat',
         px: 3,
         py: 4,
       }}
     >
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, gap: 3 }}>
-        <Paper elevation={3} sx={{ p: 2, width: 350, flexShrink: 0, height: 250 }}>
+        <Paper elevation={3} sx={{ p: 2, width: 350, flexShrink: 0, height: 250, backgroundColor: '#f3e5d9' }}>
           <Box
             component="img"
             src={SingularImage}
             alt="Welcome to the Singular Kiosk"
-            sx={{ width: '100%', maxWidth: 350, height: 200, objectFit: 'cover' }}
+            sx={{ width: '100%', maxWidth: 350, height: 200, objectFit: 'cover', borderRadius: '8px' }}
           />
         </Paper>
 
-        <Paper elevation={3} sx={{ p: 2, flex: 1 }}>
-          
+        <Paper elevation={3} sx={{ p: 2, flex: 1, backgroundColor: '#f3e5d9' }}>
+          <Box sx={{ width: '1450px', height: '250px', overflow: 'hidden' }}>
+            <Slider {...settings}>
+              {images.map((src, index) => (
+                <div key={index}>
+                  <img
+                    src={src}
+                    alt={`Slide ${index + 1}`}
+                    style={{
+                      width: '100%',
+                      height: '250px',
+                      objectFit: 'cover',
+                      borderRadius: '8px'
+                    }}
+                  />
+                </div>
+              ))}
+            </Slider>
+          </Box>
         </Paper>
-        
+
         {/* Quick Actions */}
-        <Paper elevation={3} sx={{ p: 2, width: 400, flexShrink: 0, height: 250 }}>
+        <Paper elevation={3} sx={{ p: 2, width: 400, flexShrink: 0, height: 250, backgroundColor: '#f3e5d9' }}>
           <Typography variant="h5" gutterBottom>
             Quick Actions
           </Typography>
@@ -277,7 +331,8 @@ const handleDialogSubmit = async (product) => {
                   justifyContent: 'center',
                   alignItems: 'center',
                   cursor: 'pointer',
-                  backgroundColor: '#C4A484',
+                  backgroundColor: '#c4a484', // Warm brown
+                  borderRadius: '12px',
                   '&:hover': { boxShadow: 4 },
                 }}
               >
@@ -315,7 +370,7 @@ const handleDialogSubmit = async (product) => {
 
             <Grid item xs={6}>
               <Card
-                onClick={() => navigate('/transactions')}
+                onClick={() => setTransactionModalOpen(true)}
                 sx={{
                   height: 140,
                   display: 'flex',
@@ -328,14 +383,16 @@ const handleDialogSubmit = async (product) => {
                 }}
               >
                 <CardContent sx={{ textAlign: 'center' }}>
-                  <Typography variant="h6">Transactions</Typography>
+                  <Typography variant="h6" sx={{ color: '#FFFFFF' }}>
+                    Transactions
+                  </Typography>
                 </CardContent>
               </Card>
             </Grid>
             
             <Grid item xs={6}>
               <Card
-                onClick={() => navigate('/profile')}
+                onClick={() => setProfileModalOpen(true)}
                 sx={{
                   height: 50,
                   display: 'flex',
@@ -372,110 +429,150 @@ const handleDialogSubmit = async (product) => {
         </Paper>
       </Box>
 
- <Paper 
-  elevation={3} 
-  sx={{ 
-    flex: 1, 
-    width: '100%',
-    maxWidth: 2285, 
-    p: 3, 
-    mb: 3,
-    backgroundColor: 'background.paper',
-    borderRadius: 2,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center', // This centers child elements horizontally
-  }}
->
-  {/* Search and Add Product - Now centered */}
-  <Box
-    sx={{
-      display: 'flex',
-      justifyContent: 'center', // Center the content
-      mb: 3,
-      width: '100%',
-      maxWidth: 900, // Keep a reasonable max width
-    }}
-  >
-    <Box sx={{ 
-      display: 'flex', 
-      width: '100%',
-      maxWidth: 900,
-      gap: 2
-    }}>
-      <TextField
-        variant="outlined"
-        label="Search products..."
-        value={searchTerm}
-        onChange={handleSearchChange}
-        sx={{ flex: 1,  borderRadius: '20px', '& .MuiOutlinedInput-root': { borderRadius: '20px' } } }
-      />
-      
-      <Button 
-        variant="contained" 
-        onClick={handleAddClick}
-        sx={{ width: 150, borderRadius: '12px', paddingX: 2, paddingY: 1 }} // Give the button a fixed width
-      >
-        Add Product
-      </Button>
-    </Box>
-  </Box>
-
-  {/* Categories - Now centered */}
-  <Box
-    sx={{
-      display: 'flex',
-      justifyContent: 'center',
-      width: '100%',
-      mb: 4,
-    }}
-  >
-    <Box
-      sx={{
-        display: 'flex',
-        gap: 2,
-        overflowX: 'auto',
-        maxWidth: 900,
-        px: 1,
-        py: 1,
-        bgcolor: '#eee',
-        borderRadius: 1,
-      }}
-    >
-      <Button
-        variant={!selectedCategoryName ? 'contained' : 'outlined'}
-        onClick={async () => {
-          setSelectedCategoryName(null);
-          setLoading(true);
-          try {
-            const allProducts = await getProducts();
-            setProducts(allProducts);
-          } catch {
-            setSnackbarMsg('Failed to reload products.');
-            setSnackbarOpen(true);
-          } finally {
-            setLoading(false);
-          }
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          flex: 1, 
+          width: '100%',
+          maxWidth: 2285, 
+          p: 3, 
+          mb: 3,
+          backgroundColor: '#f3e5d9', // Warm background color
+          borderRadius: 12,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
         }}
       >
-        All
-      </Button>
-      {(categories || []).map((cat) => (
-        <Button
-          key={cat.categoryID || cat.id}
-          variant={selectedCategoryName === cat.categoryName ? 'contained' : 'outlined'}
-          onClick={() => handleCategoryClick(cat.categoryName)}
-            
+        {/* Search and Add Product */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            mb: 3,
+            width: '100%',
+            maxWidth: 900,
+          }}
         >
-          {cat.categoryName}
-        </Button>
-      ))}
-    </Box>
-  </Box>
+          <Box sx={{ 
+            display: 'flex', 
+            width: '100%',
+            maxWidth: 900,
+            gap: 2
+          }}>
+            <TextField
+              variant="outlined"
+              label="Search products..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              sx={{ 
+                flex: 1,  
+                borderRadius: '20px', 
+                '& .MuiOutlinedInput-root': { borderRadius: '20px' },
+                bgcolor: '#fff', // Light background for input
+              }}
+            />
+            
+            {userRole !== 'User' && (
+              <Button 
+                variant="contained" 
+                onClick={handleAddClick}
+                sx={{ 
+                  width: 150, 
+                  borderRadius: '12px', 
+                  paddingX: 2, 
+                  paddingY: 1, 
+                  bgcolor: '#c4a484', // Warm button color
+                  '&:hover': { bgcolor: '#b18b6b' } // Darker on hover
+                }}
+              >
+                Add Product
+              </Button>
+            )}
+          </Box>
+        </Box>
 
+        {/* Categories */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            width: '100%',
+            mb: 4,
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 2,
+              overflowX: 'auto',
+              maxWidth: 900,
+              px: 1,
+              py: 1,
+              bgcolor: '#f3e5d9', // Warm background for categories
+              borderRadius: 1,
+            }}
+          >
+            <Button
+              variant={!selectedCategoryName ? 'contained' : 'outlined'}
+              onClick={async () => {
+                setSelectedCategoryName(null);
+                setLoading(true);
+                try {
+                  const allProducts = await getProducts();
+                  setProducts(allProducts);
+                } catch {
+                  setSnackbarMsg('Failed to reload products.');
+                  setSnackbarOpen(true);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              sx={{
+                bgcolor: selectedCategoryName ? '#fff' : '#c4a484', // Background color for the "All" button
+                border: selectedCategoryName ? 'none' : '2px solid #2b2520',
+                color: selectedCategoryName ? '#8B4513' : '#fff', // Text color
+                borderRadius: '12px',
+                '&:hover': { bgcolor: '#b18b6b' }, // Darker on hover
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+              }}
+            >
+              All
+            </Button>
+            {(categories || []).map((cat) => (
+              <Button
+                key={cat.categoryID || cat.id}
+                variant={selectedCategoryName === cat.categoryName ? 'contained' : 'outlined'}
+                onClick={() => handleCategoryClick(cat.categoryName)}
+                sx={{
+                  bgcolor: selectedCategoryName === cat.categoryName ? '#c4a484' : '#fff',
+                  color: selectedCategoryName === cat.categoryName ? '#fff' : '#8B4513',
+                  border: selectedCategoryName === cat.categoryName ? 'none' : '2px solid #ffffff',
+                  borderRadius: '12px',
+                  '&:hover': { bgcolor: '#2b2520', color: '#fff' },
+                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                }}
+              >
+                {cat.categoryName}
+              </Button>
+            ))}
+          </Box>
+        </Box>
 
-     {/* Product Grid with Pagination */}
-        <Box sx={{ position: 'relative', width: '100%' }}>
+        {/* Product Grid with Pagination */}
+        <Box
+          sx={{
+            position: 'relative',
+            width: '100%',
+            backgroundColor: '#f3e5d9', // Background color for the grid
+            borderRadius: '12px',
+            p: 2,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <IconButton
             onClick={() => scrollProducts('left')}
             sx={{ position: 'absolute', left: 0, top: '50%', zIndex: 1, backgroundColor: 'rgba(255,255,255,0.8)' }}
@@ -493,7 +590,8 @@ const handleDialogSubmit = async (product) => {
               scrollbarWidth: 'none',
               '&::-webkit-scrollbar': { display: 'none' },
               p: 2,
-              mx: 4
+              mx: 4, // Margin on the left and right
+              flexGrow: 1, // Allow the grid to grow
             }}
           >
             {filteredProducts.map((product) => (
@@ -502,6 +600,14 @@ const handleDialogSubmit = async (product) => {
                   product={product}
                   onAddToCart={() => addToCart(product)}
                   onEdit={handleEditProduct}
+                  
+                  sx={{
+                    backgroundColor: '#fff4e6', // Light warm color for cards
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                    transition: 'transform 0.3s',
+                    '&:hover': { transform: 'scale(1.03)', boxShadow: '0 6px 12px rgba(0, 0, 0, 0.2)' },
+                  }}
                 />
               </Box>
             ))}
@@ -520,7 +626,7 @@ const handleDialogSubmit = async (product) => {
       <Box sx={{
         py: 2,
         textAlign: 'center',
-        backgroundColor: '#1976d2',
+        backgroundColor: '#302923', // Darker brown
         color: 'white',
         flexShrink: 0,
         width: '100%',
@@ -542,23 +648,29 @@ const handleDialogSubmit = async (product) => {
         />
       )}
 
-<EditProductFormDialog
-  open={editOpen}
-  onClose={handleClose}
-  product={selectedProduct}
-  categories={categories}
-  onUpdate={async (updatedProduct) => {
-    updateProductInState(updatedProduct); // instant UI update
-    await refreshProducts();               // background sync with backend
-    refreshCartCount();
-    setEditOpen(false);
-    setSelectedProduct(null);
-  }}
-/>
+      <EditProductFormDialog
+        open={editOpen}
+        onClose={handleClose}
+        product={selectedProduct}
+        categories={categories}
+        onUpdate={async (updatedProduct) => {
+          updateProductInState(updatedProduct);
+          await refreshProducts();
+          refreshCartCount();
+          setEditOpen(false);
+          setSelectedProduct(null);
+        }}
+      />
+      
       <WalletModal 
         open={walletModalOpen}
         onClose={() => setWalletModalOpen(false)}
         onBalanceUpdate={handleBalanceUpdate}
+      />
+
+      <ProfileModal 
+        open={profileModalOpen} 
+        onClose={() => setProfileModalOpen(false)} 
       />
 
       <CartModal
@@ -566,6 +678,12 @@ const handleDialogSubmit = async (product) => {
         onClose={() => setCartModalOpen(false)}
         userId={userId}
         onBalanceUpdate={setWalletBalance}
+      />
+      
+      <TransactionModal
+        open={transactionModalOpen}
+        onClose={() => setTransactionModalOpen(false)}
+        userId={userId}
       />
       
       {/* Snackbar */}

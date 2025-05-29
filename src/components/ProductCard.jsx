@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardMedia,
@@ -8,23 +8,27 @@ import {
   Typography,
   Box,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import EditProductFormDialog from './EditProductFormDialog';
-import { toggleProductAvailability } from '../api/product'; 
+import { toggleProductAvailability } from '../api/product';
+import { getCurrentUserRole } from '../api/auth';
 
-const ProductCard = ({
-  product,
-  categories,
-  onAddToCart,
-  onEdit,
-  onToggleAvailability,
-  onProductUpdated,
-}) => {
+const ProductCard = ({ product, categories, onAddToCart, onProductUpdated }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [availability, setAvailability] = useState(product.isAvailable);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [isAvailable, setIsAvailable] = useState(Boolean(product.isAvailable));
+  const userRole = getCurrentUserRole();
+
+  useEffect(() => {
+    // Update availability if props change (like after edit or refresh)
+    setIsAvailable(Boolean(product.isAvailable));
+  }, [product.isAvailable]);
 
   const handleFlip = () => setIsFlipped(!isFlipped);
 
@@ -35,25 +39,34 @@ const ProductCard = ({
 
   const handleEditClose = () => setEditOpen(false);
 
-  // Toggle handler for the Switch
-const handleSwitchChange = async (e) => {
-  e.stopPropagation();
-  const newValue = e.target.checked;
+  const handleSwitchChange = async (e) => {
+    e.stopPropagation();
+    try {
+      await toggleProductAvailability(product.productID || product.id);
+      const newStatus = !isAvailable;
+      setIsAvailable(newStatus);
+      if (onProductUpdated) onProductUpdated();
+    } catch (error) {
+      setSnackbarMessage('Failed to update availability.');
+      setSnackbarOpen(true);
+    }
+  };
 
-  try {
-    await toggleProductAvailability(product.productID || product.id, newValue);
-    setAvailability(newValue); // update UI state
-    console.log(`Availability updated to ${newValue ? 'Available' : 'Unavailable'} for product ${product.name}`);
-    if (onProductUpdated) onProductUpdated();
-  } catch (error) {
-    console.error('Failed to toggle availability:', error);
-  }
-};
-  
+  const handleAddToCart = () => {
+    if (!isAvailable) {
+      setSnackbarMessage('Cannot add an unavailable product to the cart.');
+      setSnackbarOpen(true);
+      return;
+    }
+    if (product.quantity > product.availableQuantity) {
+      setSnackbarMessage('Quantity exceeds what is available.');
+      setSnackbarOpen(true);
+      return;
+    }
+    onAddToCart(product);
+  };
 
-
- 
-
+  const handleSnackbarClose = () => setSnackbarOpen(false);
 
   return (
     <>
@@ -77,9 +90,7 @@ const handleSwitchChange = async (e) => {
               backfaceVisibility: 'hidden',
             }}
           >
-
-             {/* Badge at bottom right only if unavailable */}
-            {!product.isAvailable && (
+            {!isAvailable && (
               <Box
                 sx={{
                   position: 'absolute',
@@ -103,8 +114,8 @@ const handleSwitchChange = async (e) => {
               alt={product.name}
               sx={{ objectFit: 'cover' }}
             />
-            <CardContent sx={{ flexGrow: 1, pb: 1 }}>
-              <Typography gutterBottom variant="h6" noWrap sx={{ mb: 0.5 }}>
+            <CardContent>
+              <Typography gutterBottom variant="h6" noWrap>
                 {product.name}
               </Typography>
               <Typography
@@ -116,7 +127,6 @@ const handleSwitchChange = async (e) => {
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   minHeight: '3.6em',
-                  mb: 0,
                 }}
               >
                 {product.description || 'No description available'}
@@ -127,9 +137,8 @@ const handleSwitchChange = async (e) => {
               <Typography variant="body2" color="text.secondary">
                 <strong>Quantity:</strong> {product.quantity}
               </Typography>
-              
               <Typography variant="body1" color="primary">
-                <strong>R{product.price ? product.price.toFixed(2) : '0.00'}</strong>
+                <strong>R{product.price?.toFixed(2) || '0.00'}</strong>
               </Typography>
             </CardContent>
           </Card>
@@ -144,55 +153,69 @@ const handleSwitchChange = async (e) => {
               transform: 'rotateY(180deg)',
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
             }}
           >
             <CardContent>
-               <Typography variant="h6" gutterBottom>
-            {product.name}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            <strong>Category:</strong> {product.categoryName || 'Uncategorized'}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            <strong>Description:</strong> {product.description || 'No description available'}
-          </Typography>
-
+              <Typography variant="h6" gutterBottom>
+                {product.name}
+              </Typography>
               <Typography variant="body2" color="text.secondary">
-                {product.description}
+                <strong>Category:</strong> {product.categoryName || 'Uncategorized'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                <strong>Description:</strong> {product.description || 'No description available'}
               </Typography>
             </CardContent>
-             <FormControlLabel
+
+            {userRole && userRole !== 'User' && (
+              <FormControlLabel
                 control={
                   <Switch
-                    checked={product.isAvailable}
+                    checked={isAvailable}
                     onChange={handleSwitchChange}
                     onClick={(e) => e.stopPropagation()}
                     color="primary"
                   />
                 }
                 label="Available"
+                sx={{ px: 2 }}
               />
+            )}
+
             <CardActions sx={{ justifyContent: 'center', gap: 2, mt: 2 }}>
-              <Button
-                variant="contained"
-                onClick={() => onAddToCart(product)}
-              >
-                Add to Cart
-              </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                color="primary"
-                startIcon={<EditIcon />}
-                onClick={handleEditOpen}
-              >
-                Edit
-              </Button>
-            </CardActions>
+  <Button
+    variant="contained"
+    onClick={(e) => {
+      e.stopPropagation();
+      handleAddToCart();
+    }}
+    disabled={!isAvailable} // Disable the button if the product is unavailable
+    sx={{
+      backgroundColor: isAvailable ? 'primary.main' : 'grey.400', // Change color if disabled
+      '&:hover': {
+        backgroundColor: isAvailable ? 'primary.dark' : 'grey.400', // Maintain the same color on hover if disabled
+      },
+    }}
+  >
+    Add to Cart
+  </Button>
+  {userRole && userRole !== 'User' && (
+    <Button
+      size="small"
+      variant="outlined"
+      color="primary"
+      startIcon={<EditIcon />}
+      onClick={handleEditOpen}
+    >
+      Edit
+    </Button>
+  )}
+</CardActions>
           </Card>
         </Box>
       </Box>
+
       <EditProductFormDialog
         open={editOpen}
         onClose={handleEditClose}
@@ -203,6 +226,12 @@ const handleSwitchChange = async (e) => {
           if (onProductUpdated) onProductUpdated();
         }}
       />
+
+      <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={handleSnackbarClose}>
+        <Alert onClose={handleSnackbarClose} severity="warning">
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </>
   );
 };
