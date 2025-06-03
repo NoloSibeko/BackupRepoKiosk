@@ -46,6 +46,7 @@ import { getCurrentUserId, logout, getCurrentUserRole } from '../api/auth';
 const UserProfileSection = ({ onClose }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+ 
   const [editMode, setEditMode] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [formData, setFormData] = useState({
@@ -65,42 +66,46 @@ const UserProfileSection = ({ onClose }) => {
   const userId = getCurrentUserId();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get(`https://localhost:7273/api/Users/${userId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
-          }
+ useEffect(() => {
+  const fetchUserData = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(`https://localhost:7273/api/Users/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+        }
+      });
+
+      console.log('API Response:', response.data); // Debug log
+
+      if (response.data) {
+        setUser(response.data);
+        setFormData({
+          name: response.data.name || '',
+          surname: response.data.surname || '',
+          email: response.data.email || '',
+          contactNumber: response.data.contactNumber || '',
+          accountStatus: response.data.accountStatus || 'Active',
+          role: response.data.role || 'User',
+          password: ''
         });
         
-        if (response.data) {
-          setUser(response.data);
-          setFormData({
-            name: response.data.name || '',
-            surname: response.data.surname || '',
-            email: response.data.email || '',
-            contactNumber: response.data.contactNumber || '',
-            accountStatus: response.data.accountStatus || 'Active',
-            role: response.data.role || 'User',
-            password: ''
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        setSnackbar({
-          open: true,
-          message: 'Failed to load user data',
-          severity: 'error'
-        });
-      } finally {
-        setLoading(false);
+        console.log('FormData after set:', response.data); // Debug log
       }
-    };
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to load user data',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchUserData();
-  }, [userId]);
+  fetchUserData();
+}, [userId]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -110,35 +115,77 @@ const UserProfileSection = ({ onClose }) => {
     }));
   };
 
-  const handleSave = async () => {
-    try {
-      const payload = {
-        ...formData,
-        ...(formData.password ? {} : { password: undefined })
-      };
+const handleSave = async () => {
+  if (!userId) {
+    setSnackbar({
+      open: true,
+      message: 'Invalid user ID. Cannot update profile.',
+      severity: 'error',
+    });
+    return;
+  }
 
-      await axios.put(`https://localhost:7273/api/Users/${userId}`, payload, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
-        }
-      });
-      
-      setUser({ ...user, ...formData });
-      setEditMode(false);
-      setSnackbar({
-        open: true,
-        message: 'Profile updated successfully',
-        severity: 'success'
-      });
-    } catch (error) {
-      console.error('Error updating user:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to update profile',
-        severity: 'error'
-      });
-    }
+  // Prepare payload with all required fields
+  const payload = {
+    name: formData.name.trim(),
+    surname: formData.surname.trim(),
+    email: formData.email.trim(), // Include email
+    contactNumber: formData.contactNumber.trim(),
+    accountStatus: formData.accountStatus, // Include accountStatus
+    userRole: formData.role, // Include role (note the API might expect "userRole" instead of "role")
+    // Only include password if it's not empty
+    ...(formData.password.length > 0 && { password: formData.password }),
   };
+
+  // Validation for required fields
+  if (!payload.name) {
+    setSnackbar({
+      open: true,
+      message: 'Name is a required field',
+      severity: 'error'
+    });
+    return;
+  }
+
+  try {
+    const response = await axios.put(`https://localhost:7273/api/Users/${userId}`, payload, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    setSnackbar({
+      open: true,
+      message: 'Profile updated successfully',
+      severity: 'success'
+    });
+
+    // Refresh user data
+    const userResponse = await axios.get(`https://localhost:7273/api/Users/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+    setUser(userResponse.data);
+    setEditMode(false);
+  } catch (error) {
+    console.error('Error updating profile:', error.response?.data || error.message);
+    
+    let errorMessage = 'Failed to update profile. Please check your information.';
+    if (error.response?.data?.errors) {
+      // Extract the first error message from each field
+      const errorMessages = Object.entries(error.response.data.errors)
+        .map(([field, errors]) => `${field}: ${errors.join(', ')}`);
+      errorMessage = errorMessages.join('\n');
+    }
+
+    setSnackbar({
+      open: true,
+      message: errorMessage,
+      severity: 'error'
+    });
+  }
+};
 
   const handleDeleteAccount = async () => {
     try {
@@ -214,6 +261,7 @@ const UserProfileSection = ({ onClose }) => {
             margin="normal"
             type="email"
             required
+            disabled
           />
           <TextField
             fullWidth
@@ -222,6 +270,7 @@ const UserProfileSection = ({ onClose }) => {
             value={formData.contactNumber}
             onChange={handleInputChange}
             margin="normal"
+            placeholder="e.g., 0123456789"
           />
           <TextField
             fullWidth
@@ -392,7 +441,7 @@ const SuperuserManagement = ({ isSuperuser }) => {
   const [editUserDialog, setEditUserDialog] = useState(false);
   const [fundDialog, setFundDialog] = useState(false);
   const [fundAmount, setFundAmount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -417,7 +466,12 @@ const SuperuserManagement = ({ isSuperuser }) => {
       });
       
       if (response.data && Array.isArray(response.data)) {
-        setUsers(response.data);
+        const mappedUsers = response.data.map((user, index) => ({
+          ...user,
+          userID: user.userID,
+          contactNumber: user.contactNumber || '', // Ensure contactNumber is handled consistently
+        }));
+        setUsers(mappedUsers);
       } else {
         setError('Invalid data format received from server');
         setSnackbar({
@@ -450,102 +504,127 @@ const SuperuserManagement = ({ isSuperuser }) => {
   );
 
   const handleEditUser = (user) => {
-    setSelectedUser(user);
+    setSelectedUser({
+      ...user,
+      userID: user.userID,
+      password: '',
+      contactNumber: user.contactNumber || '' // Ensure contactNumber is properly initialized
+    });
     setEditUserDialog(true);
   };
 
   const handleUpdateUser = async () => {
-    try {
-      const payload = {
-        userId: selectedUser.userId,
-        name: selectedUser.name,
-        surname: selectedUser.surname,
-        email: selectedUser.email,
-        contactNumber: selectedUser.contactNumber,
-        accountStatus: selectedUser.accountStatus,
-        role: selectedUser.role
-      };
+    if (!selectedUser?.userID) {
+      setSnackbar({
+        open: true,
+        message: 'Invalid user ID. Cannot update user.',
+        severity: 'error',
+      });
+      return;
+    }
 
-      await axios.put(`https://localhost:7273/api/Users/${selectedUser.userId}`, payload, {
+    const payload = {
+      name: selectedUser.name?.trim() || '',
+      surname: selectedUser.surname?.trim() || '',
+      email: selectedUser.email?.trim() || '',
+      contactNumber: selectedUser.contactNumber?.trim() || '',
+      userRole: selectedUser.userRole || 'User',
+      accountStatus: selectedUser.accountStatus || 'Active',
+      ...(selectedUser.password?.length > 0 && { password: selectedUser.password }),
+    };
+
+    if (!payload.name || !payload.email || !payload.userRole || !payload.accountStatus) {
+      setSnackbar({
+        open: true,
+        message: 'Please fill in all required fields.',
+        severity: 'error',
+      });
+      return;
+    }
+
+    try {
+      await axios.put(`https://localhost:7273/api/Users/${selectedUser.userID}`, payload, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
         }
       });
-      
-      fetchAllUsers();
-      setEditUserDialog(false);
+
       setSnackbar({
         open: true,
         message: 'User updated successfully',
         severity: 'success'
       });
+
+      fetchAllUsers();
+      setEditUserDialog(false);
+      setSelectedUser(null);
     } catch (error) {
-      console.error('Error updating user:', error);
+      console.error('Error updating user:', error.response?.data || error.message);
       setSnackbar({
         open: true,
-        message: 'Failed to update user',
+        message: 'Failed to update user. Please check required fields.',
         severity: 'error'
       });
     }
   };
 
   const handleFundUser = (user) => {
-    setSelectedUser(user);
+    setSelectedUser({
+      ...user,
+      userID: user.userID,
+    });
     setFundDialog(true);
   };
 
   const transferFunds = async () => {
-    try {
-      await axios.post(`https://localhost:7273/api/Wallet/${selectedUser.userId}/AddFunds`, {
-        amount: fundAmount
-      }, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
-        }
-      });
-      
-      setFundDialog(false);
-      setFundAmount(0);
-      fetchAllUsers();
-      setSnackbar({
-        open: true,
-        message: 'Funds added successfully',
-        severity: 'success'
-      });
-    } catch (error) {
-      console.error('Error transferring funds:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to add funds',
-        severity: 'error'
-      });
-    }
-  };
+  if (!selectedUser?.userID) {
+    setSnackbar({
+      open: true,
+      message: 'Invalid user ID. Cannot add funds.',
+      severity: 'error'
+    });
+    return;
+  }
 
-  const handleDeleteUser = async (userId) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        await axios.delete(`https://localhost:7273/api/Users/${userId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
-          }
-        });
-        fetchAllUsers();
-        setSnackbar({
-          open: true,
-          message: 'User deleted successfully',
-          severity: 'success'
-        });
-      } catch (error) {
-        console.error('Error deleting user:', error);
-        setSnackbar({
-          open: true,
-          message: 'Failed to delete user',
-          severity: 'error'
-        });
+  setSnackbar({ open: false }); // Clear any previous snackbar messages
+  setIsLoading(true); // Set loading state
+
+  try {
+    const token = localStorage.getItem('jwtToken');
+    const response = await axios.post(
+      `https://localhost:7273/api/Wallet/${selectedUser.userID}/AddFunds`,
+      {
+        userId: Number(selectedUser.userID), // Ensure userID is a number
+        amount: Number(fundAmount), // Ensure amount is a number
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       }
-    }
-  };
+    );
+
+    setFundDialog(false); // Close the dialog
+    setFundAmount(0); // Reset the fund amount
+    fetchAllUsers(); // Refresh the user list
+    setSnackbar({
+      open: true,
+      message: `Successfully added R${Number(fundAmount).toFixed(2)} to the user's wallet!`,
+      severity: 'success'
+    });
+    
+  } catch (error) {
+    console.error('Error transferring funds:', error);
+    setSnackbar({
+      open: true,
+      message: error.response?.data?.message || error.message || 'Failed to add funds',
+      severity: 'error'
+    });
+  } finally {
+    setIsLoading(false); // Reset loading state
+  }
+};
 
   const handleCloseSnackbar = () => {
     setSnackbar(prev => ({ ...prev, open: false }));
@@ -595,6 +674,7 @@ const SuperuserManagement = ({ isSuperuser }) => {
             <TableRow>
               <TableCell>User</TableCell>
               <TableCell>Email</TableCell>
+              <TableCell>Phone</TableCell>
               <TableCell>Role</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Balance</TableCell>
@@ -602,8 +682,8 @@ const SuperuserManagement = ({ isSuperuser }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredUsers.map((user) => (
-              <TableRow key={user.userId}>
+            {filteredUsers.map((user, index) => (
+              <TableRow key={user.userID || `fallback-${index}`}>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
@@ -613,10 +693,11 @@ const SuperuserManagement = ({ isSuperuser }) => {
                   </Box>
                 </TableCell>
                 <TableCell>{user.email}</TableCell>
+                <TableCell>{user.contactNumber || '-'}</TableCell>
                 <TableCell>
                   <Chip 
                     label={user.role} 
-                    color={user.role === 'Admin' ? 'primary' : 'default'} 
+                    color={user.role === 'Superuser' ? 'primary' : 'default'} 
                     size="small" 
                   />
                 </TableCell>
@@ -649,7 +730,7 @@ const SuperuserManagement = ({ isSuperuser }) => {
                   <Button
                     size="small"
                     startIcon={<Delete />}
-                    onClick={() => handleDeleteUser(user.userId)}
+                    onClick={() => handleDeleteUser(user.userID)}
                     color="error"
                   >
                     Delete
@@ -673,6 +754,14 @@ const SuperuserManagement = ({ isSuperuser }) => {
                 value={selectedUser.name || ''}
                 onChange={(e) => setSelectedUser({...selectedUser, name: e.target.value})}
                 margin="normal"
+                required
+              />
+              <TextField
+                fullWidth
+                label="Surname"
+                value={selectedUser.surname || ''}
+                onChange={(e) => setSelectedUser({...selectedUser, surname: e.target.value})}
+                margin="normal"
               />
               <TextField
                 fullWidth
@@ -680,16 +769,34 @@ const SuperuserManagement = ({ isSuperuser }) => {
                 value={selectedUser.email || ''}
                 onChange={(e) => setSelectedUser({...selectedUser, email: e.target.value})}
                 margin="normal"
+                type="email"
+                required
+              />
+              <TextField
+                fullWidth
+                label="Phone Number"
+                value={selectedUser.contactNumber || ''}
+                onChange={(e) => setSelectedUser({...selectedUser, contactNumber: e.target.value})}
+                margin="normal"
+                placeholder="e.g., 0123456789"
+              />
+              <TextField
+                fullWidth
+                label="New Password"
+                type="password"
+                value={selectedUser.password || ''}
+                onChange={(e) => setSelectedUser({...selectedUser, password: e.target.value})}
+                margin="normal"
+                placeholder="Leave blank to keep current"
               />
               <FormControl fullWidth margin="normal">
                 <InputLabel>Role</InputLabel>
                 <Select
-                  value={selectedUser.role || 'User'}
-                  onChange={(e) => setSelectedUser({...selectedUser, role: e.target.value})}
+                  value={selectedUser.userRole || 'User'}
+                  onChange={(e) => setSelectedUser({...selectedUser, userRole: e.target.value})}
                   label="Role"
                 >
                   <MenuItem value="User">User</MenuItem>
-                  <MenuItem value="Admin">Admin</MenuItem>
                   <MenuItem value="Superuser">Superuser</MenuItem>
                 </Select>
               </FormControl>
@@ -702,7 +809,6 @@ const SuperuserManagement = ({ isSuperuser }) => {
                 >
                   <MenuItem value="Active">Active</MenuItem>
                   <MenuItem value="Inactive">Inactive</MenuItem>
-                  <MenuItem value="Suspended">Suspended</MenuItem>
                 </Select>
               </FormControl>
             </Box>
@@ -714,6 +820,7 @@ const SuperuserManagement = ({ isSuperuser }) => {
             onClick={handleUpdateUser} 
             variant="contained"
             color="primary"
+            disabled={!selectedUser?.userID}
           >
             Save Changes
           </Button>
@@ -725,7 +832,7 @@ const SuperuserManagement = ({ isSuperuser }) => {
         <DialogTitle>Fund User Account</DialogTitle>
         <DialogContent>
           <Typography gutterBottom>
-            Add funds to {selectedUser?.name}'s account
+            Add funds to {selectedUser?.name}'s account 
           </Typography>
           <TextField
             fullWidth
@@ -745,7 +852,7 @@ const SuperuserManagement = ({ isSuperuser }) => {
             onClick={transferFunds} 
             variant="contained"
             color="primary"
-            disabled={fundAmount <= 0}
+            disabled={fundAmount <= 0 || !selectedUser?.userID}
           >
             Add Funds
           </Button>

@@ -11,7 +11,9 @@ import {
   CardContent,
   Button,
   Alert,
-  IconButton, 
+  IconButton,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { ShoppingCart, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import axios from 'axios';
@@ -28,13 +30,16 @@ import CartModal from '../components/CartModal';
 import { getCart, addToCart as apiAddToCart } from '../api/cart';
 import TransactionModal from '../components/TransactionModal';
 import ProfileModal from '../components/ProfileModal';
+import AccountBalanceWallet from '@mui/icons-material/AccountBalanceWallet';
+import ReceiptLong from '@mui/icons-material/ReceiptLong';
+import AccountCircle from '@mui/icons-material/AccountCircle';
+
 import Slider from 'react-slick';
 
 // Image imports
 import SS1 from '../images/SS1.png';
 import SS2 from '../images/SS2.jpg';
 import SS3 from '../images/SS3.jpg';
-import BackgroundImage from '../images/Background.jpg';
 
 // Slider configuration
 const settings = {
@@ -45,15 +50,21 @@ const settings = {
   slidesToScroll: 1,
   autoplay: true,
   autoplaySpeed: 3000,
+  // Ensure slider doesn't reinitialize unnecessarily
+  initialSlide: parseInt(localStorage.getItem('sliderIndex') || '0', 10),
+  afterChange: (current) => {
+    // Save current slide index to localStorage
+    localStorage.setItem('sliderIndex', current);
+  },
 };
 
-const images = [
-  SS1,
-  SS2,
-  SS3
-];
+const images = [SS1, SS2, SS3];
 
 const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMediumScreen = useMediaQuery(theme.breakpoints.down('md'));
+  
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,8 +84,9 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
   const productGridRef = useRef(null);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const cardWidth = 300;
-  const cardsPerPage = 7;
+  
+  const cardWidth = isSmallScreen ? 200 : isMediumScreen ? 250 : 300;
+  const cardsPerPage = isSmallScreen ? 2 : isMediumScreen ? 4 : 7;
   const gap = 16;
 
   const userRole = getCurrentUserRole();
@@ -275,174 +287,217 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
-        backgroundColor: '#948276', // Light cream background
-         // Use the imported background image
+        backgroundColor: '#948276',
         backgroundSize: 'cover',
         backgroundRepeat: 'repeat',
-        px: 3,
-        py: 4,
+        px: { xs: 1, sm: 3 },
+        py: { xs: 2, sm: 4 },
+        maxWidth: '100vw',
+        overflowX: 'hidden'
       }}
     >
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 4, gap: 3 }}>
-        <Paper elevation={3} sx={{ p: 2, width: 350, flexShrink: 0, height: 250, backgroundColor: '#f3e5d9' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        mb: 4, 
+        gap: 3,
+        width: '100%',
+        flexWrap: { xs: 'wrap', lg: 'nowrap' }
+      }}>
+        {/* Singular Image */}
+        <Paper elevation={3} sx={{ 
+          p: 2, 
+          width: { xs: '100%', sm: 350 }, 
+          flexShrink: 0, 
+          height: 200, 
+          backgroundColor: '#f3e5d9',
+          order: { xs: 1, lg: 0 }
+        }}>
           <Box
             component="img"
             src={SingularImage}
             alt="Welcome to the Singular Kiosk"
-            sx={{ width: '100%', maxWidth: 350, height: 200, objectFit: 'cover', borderRadius: '8px' }}
+            sx={{ 
+              width: '100%', 
+              height: '100%', 
+              objectFit: 'cover', 
+              borderRadius: '8px' 
+            }}
           />
         </Paper>
 
-        <Paper elevation={3} sx={{ p: 2, flex: 1, backgroundColor: '#f3e5d9' }}>
-          <Box sx={{ width: '1450px', height: '250px', overflow: 'hidden' }}>
-            <Slider {...settings}>
-              {images.map((src, index) => (
-                <div key={index}>
-                  <img
-                    src={src}
-                    alt={`Slide ${index + 1}`}
-                    style={{
-                      width: '100%',
-                      height: '250px',
-                      objectFit: 'cover',
-                      borderRadius: '8px'
-                    }}
-                  />
-                </div>
-              ))}
-            </Slider>
-          </Box>
-        </Paper>
+       
+<Paper
+  elevation={3}
+  sx={{
+    borderRadius: '8px',
+    boxShadow: '0px 3px 3px -2px rgba(0,0,0,0.2), 0px 3px 4px 0px rgba(0,0,0,0.14), 0px 1px 8px 0px rgba(0,0,0,0.12)',
+    width: '100%', // Ensure full width within parent
+    maxWidth: '1000px', // Set a max-width for consistency
+    height: '232px', // Explicit height to match images
+    overflow: 'hidden', // Prevent overflow issues
+    flexShrink: 0,
+    order: 1, // Maintain layout order
+  }}
+>
+  <Slider {...settings}>
+    {images.map((img, index) => (
+      <Box
+        key={index}
+        sx={{
+          height: '232px', // Explicit height for slide content
+          width: '100%', // Full width of the slider
+          display: 'flex', // Center image
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <img
+          src={img}
+          alt={`Promo ${index + 1}`}
+          style={{
+            width: '100%',
+            height: '232px', // Match Box height
+            objectFit: 'cover', // Maintain aspect ratio
+            borderRadius: '8px',
+            display: 'block', // Prevent margin issues
+          }}
+        />
+      </Box>
+    ))}
+  </Slider>
+</Paper>
 
         {/* Quick Actions */}
-        <Paper elevation={3} sx={{ p: 2, width: 400, flexShrink: 0, height: 250, backgroundColor: '#f3e5d9' }}>
-          <Typography variant="h5" gutterBottom>
-            Quick Actions
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <Card
-                onClick={() => setCartModalOpen(true)}
-                sx={{
-                  height: 140,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  backgroundColor: '#c4a484', // Warm brown
-                  borderRadius: '12px',
-                  '&:hover': { boxShadow: 4 },
-                }}
-              >
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Badge badgeContent={cartItemsCount} color="error">
-                    <ShoppingCart fontSize="large" />
-                  </Badge>
-                  <Typography variant="h6" sx={{ mt: 1 }}>
-                    Cart
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={6}>
-              <Card
-                onClick={() => setWalletModalOpen(true)}
-                sx={{
-                  height: 140,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  backgroundColor: '#9C8369',
-                  '&:hover': { boxShadow: 4 },
-                }}
-              >
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Typography variant="h6">Wallet</Typography>
-                  <Typography variant="subtitle1"> R {typeof walletBalance === 'number' ? walletBalance.toFixed(2) : '0.00'}</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
+<Paper
+  elevation={3}
+  sx={{
+    p: 2,
+    width: { xs: '100%', sm: 400 },
+    flexShrink: 0,
+    height: 200,
+    backgroundColor: '#f3e5d9',
+    order: 2,
+  }}
+>
+  <Typography variant="h6" gutterBottom>
+    Quick Actions
+  </Typography>
+  <Grid container spacing={2}>
+    <Grid item xs={3}>
+      <Card
+        onClick={() => setCartModalOpen(true)}
+        sx={{
+          height: 60,
+          width: 100,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: 'pointer',
+          backgroundColor: '#c4a484',
+          borderRadius: '12px',
+          '&:hover': { boxShadow: 4 },
+        }}
+      >
+        <Badge badgeContent={cartItemsCount} color="error">
+          <ShoppingCart fontSize="medium" />
+        </Badge>
+      </Card>
+    </Grid>
 
-            <Grid item xs={6}>
-              <Card
-                onClick={() => setTransactionModalOpen(true)}
-                sx={{
-                  height: 140,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  backgroundColor: '#75624F',
-                  '&:hover': { boxShadow: 4 },
-                }}
-              >
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Typography variant="h6" sx={{ color: '#FFFFFF' }}>
-                    Transactions
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={6}>
-              <Card
-                onClick={() => setProfileModalOpen(true)}
-                sx={{
-                  height: 50,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  backgroundColor: '#27201A',
-                  color: '#fff',
-                  '&:hover': { boxShadow: 4 },
-                }}
-              >
-                <CardContent sx={{ textAlign: 'center' }}>
-                  <Typography variant="h6">Profile</Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Button
-                fullWidth
-                variant="contained"
-                color="error"
-                onClick={() => {
-                  localStorage.removeItem('jwtToken');
-                  navigate('/login');
-                }}
-                sx={{ height: 50 }}
-              >
-                Logout
-              </Button>
-            </Grid>
-          </Grid>
-        </Paper>
+    <Grid item xs={3}>
+      <Card
+        onClick={() => setWalletModalOpen(true)}
+        sx={{
+          height: 60,
+          width: 100,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: 'pointer',
+          backgroundColor: '#9C8369',
+          borderRadius: '12px',
+          '&:hover': { boxShadow: 4 },
+        }}
+      >
+        <AccountBalanceWallet fontSize="medium" />
+         <Typography variant="subtitle1"> R {typeof walletBalance === 'number' ? walletBalance.toFixed(2) : '0.00'}</Typography>
+      </Card>
+    </Grid>
+
+    <Grid item xs={3}>
+      <Card
+        onClick={() => setTransactionModalOpen(true)}
+        sx={{
+          height: 60,
+          width: 100,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: 'pointer',
+          backgroundColor: '#75624F',
+          borderRadius: '12px',
+          '&:hover': { boxShadow: 4 },
+        }}
+      >
+        <ReceiptLong fontSize="medium" sx={{ color: '#fff' }} />
+      </Card>
+    </Grid>
+
+    <Grid item xs={3}>
+      <Card
+        onClick={() => setProfileModalOpen(true)}
+        sx={{
+          height: 60,
+          width: 100,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          cursor: 'pointer',
+          backgroundColor: '#27201A',
+          borderRadius: '12px',
+          '&:hover': { boxShadow: 4 },
+        }}
+      >
+        <AccountCircle fontSize="medium" sx={{ color: '#fff' }} />
+      </Card>
+    </Grid>
+
+    <Grid item xs={12}>
+      <Button
+        fullWidth
+        variant="contained"
+        color="error"
+        onClick={() => {
+          localStorage.removeItem('jwtToken');
+          navigate('/login');
+        }}
+        sx={{ height: 60, width: 100, borderRadius: '12px', backgroundColor: '#cf3838', '&:hover': { backgroundColor: '#cf3838' } }}
+      >
+        Logout
+      </Button>
+    </Grid>
+  </Grid>
+</Paper>
+
       </Box>
 
+      {/* Main Content */}
       <Paper 
         elevation={3} 
         sx={{ 
           flex: 1, 
-          width: '100%',
-          maxWidth: 2285, 
+          width: '97.35%',
           p: 3, 
           mb: 3,
-          backgroundColor: '#f3e5d9', // Warm background color
-          borderRadius: 12,
+          backgroundColor: '#f3e5d9',
+          borderRadius: '12px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+          overflow: 'hidden'
         }}
       >
         {/* Search and Add Product */}
@@ -470,7 +525,7 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
                 flex: 1,  
                 borderRadius: '20px', 
                 '& .MuiOutlinedInput-root': { borderRadius: '20px' },
-                bgcolor: '#fff', // Light background for input
+                bgcolor: '#fff',
               }}
             />
             
@@ -483,8 +538,8 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
                   borderRadius: '12px', 
                   paddingX: 2, 
                   paddingY: 1, 
-                  bgcolor: '#c4a484', // Warm button color
-                  '&:hover': { bgcolor: '#b18b6b' } // Darker on hover
+                  bgcolor: '#c4a484',
+                  '&:hover': { bgcolor: '#b18b6b' }
                 }}
               >
                 Add Product
@@ -510,8 +565,9 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
               maxWidth: 900,
               px: 1,
               py: 1,
-              bgcolor: '#f3e5d9', // Warm background for categories
+              bgcolor: '#f3e5d9',
               borderRadius: 1,
+              
             }}
           >
             <Button
@@ -530,11 +586,11 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
                 }
               }}
               sx={{
-                bgcolor: selectedCategoryName ? '#fff' : '#c4a484', // Background color for the "All" button
+                bgcolor: selectedCategoryName ? '#fff' : '#c4a484',
                 border: selectedCategoryName ? 'none' : '2px solid #2b2520',
-                color: selectedCategoryName ? '#8B4513' : '#fff', // Text color
+                color: selectedCategoryName ? '#8B4513' : '#fff',
                 borderRadius: '12px',
-                '&:hover': { bgcolor: '#b18b6b' }, // Darker on hover
+                '&:hover': { bgcolor: '#b18b6b' },
                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
               }}
             >
@@ -560,22 +616,30 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
           </Box>
         </Box>
 
-        {/* Product Grid with Pagination */}
+        {/* Product Grid */}
         <Box
           sx={{
             position: 'relative',
             width: '100%',
-            backgroundColor: '#f3e5d9', // Background color for the grid
+            backgroundColor: '#f3e5d9',
             borderRadius: '12px',
             p: 2,
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
+            overflow: 'hidden',
           }}
         >
           <IconButton
             onClick={() => scrollProducts('left')}
-            sx={{ position: 'absolute', left: 0, top: '50%', zIndex: 1, backgroundColor: 'rgba(255,255,255,0.8)' }}
+            sx={{ 
+              position: 'absolute', 
+              left: 0, 
+              top: '50%', 
+              zIndex: 1, 
+              backgroundColor: 'rgba(255,255,255,0.8)',
+              display: { xs: 'none', sm: 'flex' } // Hide on small screens
+            }}
           >
             <ChevronLeft fontSize="large" />
           </IconButton>
@@ -590,19 +654,22 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
               scrollbarWidth: 'none',
               '&::-webkit-scrollbar': { display: 'none' },
               p: 2,
-              mx: 4, // Margin on the left and right
-              flexGrow: 1, // Allow the grid to grow
+              mx: { xs: 0, sm: 4 },
+              flexGrow: 1,
             }}
           >
             {filteredProducts.map((product) => (
-              <Box key={product.productID || product.id} sx={{ minWidth: cardWidth, flexShrink: 0 }}>
+              <Box key={product.productID || product.id} sx={{ 
+                minWidth: cardWidth, 
+                flexShrink: 0,
+                scrollSnapAlign: 'start' // Better scrolling on mobile
+              }}>
                 <ProductCard
                   product={product}
                   onAddToCart={() => addToCart(product)}
                   onEdit={handleEditProduct}
-                  
                   sx={{
-                    backgroundColor: '#fff4e6', // Light warm color for cards
+                    backgroundColor: '#fff4e6',
                     borderRadius: '12px',
                     boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
                     transition: 'transform 0.3s',
@@ -615,7 +682,14 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
 
           <IconButton
             onClick={() => scrollProducts('right')}
-            sx={{ position: 'absolute', right: 0, top: '50%', zIndex: 1, backgroundColor: 'rgba(255,255,255,0.8)' }}
+            sx={{ 
+              position: 'absolute', 
+              right: 0, 
+              top: '50%', 
+              zIndex: 1, 
+              backgroundColor: 'rgba(255,255,255,0.8)',
+              display: { xs: 'none', sm: 'flex' } // Hide on small screens
+            }}
           >
             <ChevronRight fontSize="large" />
           </IconButton>
@@ -626,18 +700,17 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
       <Box sx={{
         py: 2,
         textAlign: 'center',
-        backgroundColor: '#302923', // Darker brown
+        backgroundColor: '#302923',
         color: 'white',
         flexShrink: 0,
         width: '100%',
-        position: 'relative',
       }}>
         <Typography variant="body2">
           © {new Date().getFullYear()} Singular Kiosk System by Nolo. All rights reserved ;)
         </Typography>
       </Box>
 
-      {/* Modals */}
+      {/* Modals and Snackbar (keep existing) */}
       {openDialog && (
         <ProductFormDialog
           open={openDialog}
@@ -686,7 +759,6 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
         userId={userId}
       />
       
-      {/* Snackbar */}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={3500}
