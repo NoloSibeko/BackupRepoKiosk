@@ -33,11 +33,10 @@ import ProfileModal from '../components/ProfileModal';
 import AccountBalanceWallet from '@mui/icons-material/AccountBalanceWallet';
 import ReceiptLong from '@mui/icons-material/ReceiptLong';
 import AccountCircle from '@mui/icons-material/AccountCircle';
-
 import Slider from 'react-slick';
 
 // Image imports
-import SS1 from '../images/SS1.png';
+import SS1 from '../images/SS1.jpg';
 import SS2 from '../images/SS2.jpg';
 import SS3 from '../images/SS3.jpg';
 
@@ -45,15 +44,13 @@ import SS3 from '../images/SS3.jpg';
 const settings = {
   dots: true,
   infinite: true,
-  speed: 500,
+  speed: 1000,
   slidesToShow: 1,
   slidesToScroll: 1,
   autoplay: true,
-  autoplaySpeed: 3000,
-  // Ensure slider doesn't reinitialize unnecessarily
+  autoplaySpeed: 5000,
   initialSlide: parseInt(localStorage.getItem('sliderIndex') || '0', 10),
   afterChange: (current) => {
-    // Save current slide index to localStorage
     localStorage.setItem('sliderIndex', current);
   },
 };
@@ -232,6 +229,11 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
   });
 
   const addToCart = async (product) => {
+    if (product.quantity <= 0) {
+      setSnackbarMsg('Product is out of stock.');
+      setSnackbarOpen(true);
+      return;
+    }
     try {
       await apiAddToCart({
         userID: userId,
@@ -239,6 +241,7 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
         quantity: 1,
       });
 
+      await refreshProducts(); // Refresh products to update quantity
       await refreshCartCount();
 
       const updatedCart = await getCart(userId);
@@ -327,160 +330,171 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
           />
         </Paper>
 
-       
-<Paper
-  elevation={3}
-  sx={{
-    borderRadius: '8px',
-    boxShadow: '0px 3px 3px -2px rgba(0,0,0,0.2), 0px 3px 4px 0px rgba(0,0,0,0.14), 0px 1px 8px 0px rgba(0,0,0,0.12)',
-    width: '100%', // Ensure full width within parent
-    maxWidth: '1000px', // Set a max-width for consistency
-    height: '232px', // Explicit height to match images
-    overflow: 'hidden', // Prevent overflow issues
-    flexShrink: 0,
-    order: 1, // Maintain layout order
-  }}
->
-  <Slider {...settings}>
-    {images.map((img, index) => (
-      <Box
-        key={index}
-        sx={{
-          height: '232px', // Explicit height for slide content
-          width: '100%', // Full width of the slider
-          display: 'flex', // Center image
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        <img
-          src={img}
-          alt={`Promo ${index + 1}`}
-          style={{
-            width: '100%',
-            height: '232px', // Match Box height
-            objectFit: 'cover', // Maintain aspect ratio
+        <Paper
+          elevation={3}
+          sx={{
             borderRadius: '8px',
-            display: 'block', // Prevent margin issues
+            boxShadow: '0px 3px 3px -2px rgba(0,0,0,0.2), 0px 3px 4px 0px rgba(0,0,0,0.14), 0px 1px 8px 0px rgba(0,0,0,0.12)',
+            width: '100%',
+            maxWidth: '1000px',
+            height: '232px',
+            overflow: 'hidden',
+            flexShrink: 0,
+            order: 1,
           }}
-        />
-      </Box>
-    ))}
-  </Slider>
-</Paper>
+        >
+          <Slider {...settings}>
+            {images.map((img, index) => (
+              <Box
+                key={index}
+                sx={{
+                  height: '232px',
+                  width: '100%',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <img
+                  src={img}
+                  alt={`Promo ${index + 1}`}
+                  style={{
+                    width: '100%',
+                    height: '232px',
+                    objectFit: 'cover',
+                    borderRadius: '8px',
+                    display: 'block',
+                  }}
+                />
+              </Box>
+            ))}
+          </Slider>
+        </Paper>
 
         {/* Quick Actions */}
-<Paper
-  elevation={3}
+        <Paper
+          elevation={3}
+          sx={{
+            p: 2,
+            width: { xs: '100%', sm: 400 },
+            flexShrink: 0,
+            height: 200,
+            backgroundColor: '#f3e5d9',
+            order: 2,
+          }}
+        >
+          <Typography variant="h6" gutterBottom>
+            Quick Actions
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={3}>
+              <Card
+                onClick={() => setCartModalOpen(true)}
+                sx={{
+                  height: 60,
+                  width: 100,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  backgroundColor: '#c4a484',
+                  borderRadius: '12px',
+                  '&:hover': { boxShadow: 4 },
+                }}
+              >
+                <Badge badgeContent={cartItemsCount} color="error">
+                  <ShoppingCart fontSize="medium" />
+                </Badge>
+              </Card>
+            </Grid>
+
+            <Grid item xs={3}>
+              <Card
+  onClick={() => setWalletModalOpen(true)}
   sx={{
-    p: 2,
-    width: { xs: '100%', sm: 400 },
-    flexShrink: 0,
-    height: 200,
-    backgroundColor: '#f3e5d9',
-    order: 2,
+    height: 60,
+    width: 100,
+    display: 'flex',
+    flexDirection: 'column', // Stack vertically
+    justifyContent: 'center',
+    alignItems: 'center',
+    cursor: 'pointer',
+    backgroundColor: '#9C8369',
+    borderRadius: '12px',
+    '&:hover': { boxShadow: 4 },
   }}
 >
-  <Typography variant="h6" gutterBottom>
-    Quick Actions
+  <AccountBalanceWallet fontSize="medium" sx={{ color: '#fff' }} />
+  <Typography variant="subtitle2" sx={{ color: '#fff', mt: 0.5 }}>
+    R {typeof walletBalance === 'number' ? walletBalance.toFixed(2) : '0.00'}
   </Typography>
-  <Grid container spacing={2}>
-    <Grid item xs={3}>
-      <Card
-        onClick={() => setCartModalOpen(true)}
-        sx={{
-          height: 60,
-          width: 100,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          cursor: 'pointer',
-          backgroundColor: '#c4a484',
-          borderRadius: '12px',
-          '&:hover': { boxShadow: 4 },
-        }}
-      >
-        <Badge badgeContent={cartItemsCount} color="error">
-          <ShoppingCart fontSize="medium" />
-        </Badge>
-      </Card>
-    </Grid>
+</Card>
 
-    <Grid item xs={3}>
-      <Card
-        onClick={() => setWalletModalOpen(true)}
-        sx={{
-          height: 60,
-          width: 100,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          cursor: 'pointer',
-          backgroundColor: '#9C8369',
-          borderRadius: '12px',
-          '&:hover': { boxShadow: 4 },
-        }}
-      >
-        <AccountBalanceWallet fontSize="medium" />
-         <Typography variant="subtitle1"> R {typeof walletBalance === 'number' ? walletBalance.toFixed(2) : '0.00'}</Typography>
-      </Card>
-    </Grid>
+            </Grid>
 
-    <Grid item xs={3}>
-      <Card
-        onClick={() => setTransactionModalOpen(true)}
-        sx={{
-          height: 60,
-          width: 100,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          cursor: 'pointer',
-          backgroundColor: '#75624F',
-          borderRadius: '12px',
-          '&:hover': { boxShadow: 4 },
-        }}
-      >
-        <ReceiptLong fontSize="medium" sx={{ color: '#fff' }} />
-      </Card>
-    </Grid>
+            <Grid item xs={3}>
+              <Card
+  onClick={() => setTransactionModalOpen(true)}
+  sx={{
+    height: 60,
+    width: 100,
+    display: 'flex',
+    flexDirection: 'column', // stack items vertically
+    justifyContent: 'center',
+    alignItems: 'center',
+    cursor: 'pointer',
+    backgroundColor: '#75624F',
+    borderRadius: '12px',
+    '&:hover': { boxShadow: 4 },
+  }}
+>
+  <ReceiptLong fontSize="medium" sx={{ color: '#fff' }} />
+  <Typography variant="subtitle2" sx={{ color: '#fff', mt: 0.5 }}>
+    Receipts
+  </Typography>
+</Card>
 
-    <Grid item xs={3}>
-      <Card
-        onClick={() => setProfileModalOpen(true)}
-        sx={{
-          height: 60,
-          width: 100,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          cursor: 'pointer',
-          backgroundColor: '#27201A',
-          borderRadius: '12px',
-          '&:hover': { boxShadow: 4 },
-        }}
-      >
-        <AccountCircle fontSize="medium" sx={{ color: '#fff' }} />
-      </Card>
-    </Grid>
+            </Grid>
 
-    <Grid item xs={12}>
-      <Button
-        fullWidth
-        variant="contained"
-        color="error"
-        onClick={() => {
-          localStorage.removeItem('jwtToken');
-          navigate('/login');
-        }}
-        sx={{ height: 60, width: 100, borderRadius: '12px', backgroundColor: '#cf3838', '&:hover': { backgroundColor: '#cf3838' } }}
-      >
-        Logout
-      </Button>
-    </Grid>
-  </Grid>
-</Paper>
+            <Grid item xs={3}>
+              <Card
+                onClick={() => setProfileModalOpen(true)}
+                sx={{
+                   height: 60,
+    width: 100,
+    display: 'flex',
+    flexDirection: 'column', // Stack vertically
+    justifyContent: 'center',
+    alignItems: 'center',
+    cursor: 'pointer',
+    backgroundColor: '#27201A',
+    borderRadius: '12px',
+    '&:hover': { boxShadow: 4 },
+                }}
+              >
+                <AccountCircle fontSize="medium" sx={{ color: '#fff' }} />
+                 <Typography variant="subtitle2" sx={{ color: '#fff', mt: 0.5 }}>
+                  Profile
+  </Typography>
+              </Card>
+            </Grid>
 
+            <Grid item xs={12}>
+              <Button
+                fullWidth
+                variant="contained"
+                color="error"
+                onClick={() => {
+                  localStorage.removeItem('jwtToken');
+                  navigate('/login');
+                }}
+                sx={{ height: 60, width: 100, borderRadius: '12px', backgroundColor: '#cf3838', '&:hover': { backgroundColor: '#cf3838' } }}
+              >
+                Logout
+              </Button>
+            </Grid>
+          </Grid>
+        </Paper>
       </Box>
 
       {/* Main Content */}
@@ -567,7 +581,6 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
               py: 1,
               bgcolor: '#f3e5d9',
               borderRadius: 1,
-              
             }}
           >
             <Button
@@ -638,7 +651,7 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
               top: '50%', 
               zIndex: 1, 
               backgroundColor: 'rgba(255,255,255,0.8)',
-              display: { xs: 'none', sm: 'flex' } // Hide on small screens
+              display: { xs: 'none', sm: 'flex' }
             }}
           >
             <ChevronLeft fontSize="large" />
@@ -662,7 +675,7 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
               <Box key={product.productID || product.id} sx={{ 
                 minWidth: cardWidth, 
                 flexShrink: 0,
-                scrollSnapAlign: 'start' // Better scrolling on mobile
+                scrollSnapAlign: 'start'
               }}>
                 <ProductCard
                   product={product}
@@ -688,7 +701,7 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
               top: '50%', 
               zIndex: 1, 
               backgroundColor: 'rgba(255,255,255,0.8)',
-              display: { xs: 'none', sm: 'flex' } // Hide on small screens
+              display: { xs: 'none', sm: 'flex' }
             }}
           >
             <ChevronRight fontSize="large" />
@@ -710,7 +723,7 @@ const Dashboard = ({ setParentModalOpen, parentModalOpen }) => {
         </Typography>
       </Box>
 
-      {/* Modals and Snackbar (keep existing) */}
+      {/* Modals and Snackbar */}
       {openDialog && (
         <ProductFormDialog
           open={openDialog}

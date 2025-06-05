@@ -45,7 +45,7 @@ import { getCurrentUserId, logout, getCurrentUserRole } from '../api/auth';
 // User Profile Section Component
 const UserProfileSection = ({ onClose }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+ const [loading, setLoading] = useState(true);
  
   const [editMode, setEditMode] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -576,7 +576,7 @@ const SuperuserManagement = ({ isSuperuser }) => {
     setFundDialog(true);
   };
 
-  const transferFunds = async () => {
+const transferFunds = async () => {
   if (!selectedUser?.userID) {
     setSnackbar({
       open: true,
@@ -587,7 +587,7 @@ const SuperuserManagement = ({ isSuperuser }) => {
   }
 
   setSnackbar({ open: false }); // Clear any previous snackbar messages
-  setIsLoading(true); // Set loading state
+  setLoading(true); // Set loading state - changed from setIsLoading to setLoading
 
   try {
     const token = localStorage.getItem('jwtToken');
@@ -622,9 +622,9 @@ const SuperuserManagement = ({ isSuperuser }) => {
       severity: 'error'
     });
   } finally {
-    setIsLoading(false); // Reset loading state
+    setLoading(false); // Reset loading state - changed from setIsLoading to setLoading
   }
-};
+};;
 
   const handleCloseSnackbar = () => {
     setSnackbar(prev => ({ ...prev, open: false }));

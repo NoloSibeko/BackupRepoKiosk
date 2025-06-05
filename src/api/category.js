@@ -24,26 +24,25 @@ export const getCategories = async () => {
   }
 };
 
-// Fetch a category with its products by ID
-/*export const getCategoryWithProducts = async (categoryId) => {
+// Add a new category (POST /api/Category)
+export const addCategory = async ({ name }) => {
   try {
-    const response = await fetch(`https://localhost:7273/api/Category/${categoryId}`, {
-      method: 'GET',
+    const payload = { Name: name };
+
+    const response = await axios.post('https://localhost:7273/api/Category', payload, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+        'Content-Type': 'application/json',
       },
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch category with products');
-    }
-
-    return await response.json();
+    return response.data;
   } catch (error) {
-    console.error('Error fetching category with products:', error);
+    console.error('Error adding category:', error.response?.data || error.message);
     throw error;
   }
-};*/
+};
+
 
 
 export const getCategoryWithProducts = async (categoryName, setProducts) => {

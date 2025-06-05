@@ -15,7 +15,11 @@ import {
   CircularProgress,
   Avatar,
   Box,
-  IconButton
+  IconButton,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormLabel
 } from '@mui/material';
 import { Add, Remove, Delete, ShoppingCart } from '@mui/icons-material';
 import { getCart, removeFromCart, updateCartItem, checkoutCart } from '../api/cart';
@@ -25,6 +29,7 @@ const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [orderType, setOrderType] = useState('pickup'); // Default order type
 
   const cartTotal = cartItems.reduce((total, item) => {
     return total + (item.price * item.quantity);
@@ -68,10 +73,10 @@ const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
     setError('');
     try {
       await updateCartItem(cartItemID, { quantity: newQty });
-      setCartItems(prevItems => 
-        prevItems.map(item => 
-          item.cartItemID === cartItemID 
-            ? { ...item, quantity: newQty, subtotal: item.price * newQty } 
+      setCartItems(prevItems =>
+        prevItems.map(item =>
+          item.cartItemID === cartItemID
+            ? { ...item, quantity: newQty, subtotal: item.price * newQty }
             : item
         )
       );
@@ -82,21 +87,25 @@ const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
     }
   };
 
-  const handleCheckout = async () => {
+ const handleCheckout = async () => {
     setLoading(true);
     setError('');
     setSuccess('');
     try {
-      await checkoutCart(userId);
-      setSuccess('Checkout successful!');
-      await fetchCart();
-      if (onBalanceUpdate) onBalanceUpdate();
+        // Pass the necessary details in the DTO, including order type
+        await checkoutCart(userId, {
+            OrderType: orderType,
+            Description: "Purchase checkout" // Include any other details needed
+        });
+        setSuccess('Checkout successful!');
+        await fetchCart();
+        if (onBalanceUpdate) onBalanceUpdate();
     } catch (err) {
-      setError(err.response?.data?.message || 'Checkout failed.');
+        setError(err.response?.data?.message || 'Checkout failed.');
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -110,6 +119,12 @@ const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
         {loading && <CircularProgress sx={{ display: 'block', mx: 'auto', my: 2 }} />}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+
+        <FormLabel component="legend">Order Type</FormLabel>
+        <RadioGroup row value={orderType} onChange={(e) => setOrderType(e.target.value)}>
+          <FormControlLabel value="pickup" control={<Radio />} label="Pickup" />
+          <FormControlLabel value="delivery" control={<Radio />} label="Delivery" />
+        </RadioGroup>
 
         {(!cartItems || cartItems.length === 0) && !loading ? (
           <Box textAlign="center" py={4}>
@@ -134,7 +149,7 @@ const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
                   <TableCell>
                     <Box display="flex" alignItems="center">
                       <Avatar
-                        src={item.imageURL || '/path/to/default/image.jpg'} // Use a default image if not available
+                        src={item.imageURL || '/path/to/default/image.jpg'}
                         alt={item.productName}
                         sx={{ width: 56, height: 56, mr: 2 }}
                         variant="rounded"
@@ -190,8 +205,8 @@ const CartModal = ({ open, onClose, userId, onBalanceUpdate }) => {
         )}
       </DialogContent>
       <DialogActions sx={{ p: 3 }}>
-        <Button 
-          onClick={onClose} 
+        <Button
+          onClick={onClose}
           disabled={loading}
           sx={{ mr: 2 }}
         >

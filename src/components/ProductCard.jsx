@@ -22,13 +22,22 @@ const ProductCard = ({ product, categories, onAddToCart, onProductUpdated }) => 
   const [editOpen, setEditOpen] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [isAvailable, setIsAvailable] = useState(Boolean(product.isAvailable));
+  const [isAvailable, setIsAvailable] = useState(Boolean(product.quantity > 0));
   const userRole = getCurrentUserRole();
 
   useEffect(() => {
-    // Update availability if props change (like after edit or refresh)
-    setIsAvailable(Boolean(product.isAvailable));
-  }, [product.isAvailable]);
+    // Automatically update availability based on quantity
+    const shouldBeAvailable = product.quantity > 0;
+    if (shouldBeAvailable !== isAvailable) {
+      setIsAvailable(shouldBeAvailable);
+      // Update backend availability
+      toggleProductAvailability(product.productID || product.id, shouldBeAvailable)
+        .catch((error) => {
+          setSnackbarMessage('Failed to update product availability.');
+          setSnackbarOpen(true);
+        });
+    }
+  }, [product.quantity, product.productID, product.id, isAvailable]);
 
   const handleFlip = () => setIsFlipped(!isFlipped);
 
@@ -184,34 +193,34 @@ const ProductCard = ({ product, categories, onAddToCart, onProductUpdated }) => 
             )}
 
             <CardActions sx={{ justifyContent: 'center', gap: 2, mt: 2 }}>
-  <Button
-    variant="contained"
-    onClick={(e) => {
-      e.stopPropagation();
-      handleAddToCart();
-    }}
-    disabled={!isAvailable} // Disable the button if the product is unavailable
-    sx={{
-      backgroundColor: isAvailable ? 'primary.main' : 'grey.400', // Change color if disabled
-      '&:hover': {
-        backgroundColor: isAvailable ? 'primary.dark' : 'grey.400', // Maintain the same color on hover if disabled
-      },
-    }}
-  >
-    Add to Cart
-  </Button>
-  {userRole && userRole !== 'User' && (
-    <Button
-      size="small"
-      variant="outlined"
-      color="primary"
-      startIcon={<EditIcon />}
-      onClick={handleEditOpen}
-    >
-      Edit
-    </Button>
-  )}
-</CardActions>
+              <Button
+                variant="contained"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAddToCart();
+                }}
+                disabled={!isAvailable}
+                sx={{
+                  backgroundColor: isAvailable ? 'primary.main' : 'grey.400',
+                  '&:hover': {
+                    backgroundColor: isAvailable ? 'primary.dark' : 'grey.400',
+                  },
+                }}
+              >
+                Add to Cart
+              </Button>
+              {userRole && userRole !== 'User' && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<EditIcon />}
+                  onClick={handleEditOpen}
+                >
+                  Edit
+                </Button>
+              )}
+            </CardActions>
           </Card>
         </Box>
       </Box>

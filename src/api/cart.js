@@ -32,7 +32,19 @@ export const removeFromCart = async (itemId) => {
   return response.data;
 };
 
-export const checkoutCart = async (userId) => {
-  const response = await axios.post(`${apiUrl}/checkout/${userId}`);
-  return response.data;
+export const checkoutCart = async (userId, orderDetails) => {
+    const response = await fetch(`https://localhost:7273/api/Cart/checkout/${userId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json', // Specify the content type
+            'Accept': 'application/json',
+        },
+        body: JSON.stringify(orderDetails), // Convert the order details to JSON
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
 };
